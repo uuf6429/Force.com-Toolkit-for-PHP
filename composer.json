@@ -2,14 +2,39 @@
     "name": "developerforce/force.com-toolkit-for-php",
     "description": "A wrapper for the Force.com Web Services SOAP API",
     "license": "BSD-3-Clause",
+    "require": {
+        "php": ">=5.6",
+        "ext-openssl": "*",
+        "ext-soap": "*",
+        "ext-dom": "*"
+    },
     "autoload": {
-        "classmap": [
-           "soapclient"
-        ]
+        "psr-4": {
+            "SForce\\": "src/SForce"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SForce\\Test\\": [
+                "test",
+                "test/unit",
+                "test/integration"
+            ]
+        }
     },
     "extra": {
         "branch-alias": {
             "dev-master": "1.0.x-dev"
         }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7 || ^5",
+        "fabpot/php-cs-fixer": "^2.10"
+    },
+    "scripts": {
+        "post-update-cmd": "php contrib/install-git-hooks.php",
+        "post-install-cmd": "php contrib/install-git-hooks.php",
+        "phpunit": "phpunit --configuration test/phpunit.xml",
+        "php-cs-fixer": "php-cs-fixer fix --verbose --config ./.php_cs --allow-risky yes"
     }
 }
