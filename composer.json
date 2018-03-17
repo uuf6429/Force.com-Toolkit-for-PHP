@@ -15,11 +15,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "SForce\\Test\\": [
-                "test",
-                "test/unit",
-                "test/integration"
-            ]
+            "SForce\\Test\\": "test"
         }
     },
     "extra": {

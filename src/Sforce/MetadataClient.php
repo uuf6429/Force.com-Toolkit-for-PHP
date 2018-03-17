@@ -64,25 +64,13 @@ class MetadataClient
      */
     public function __construct($wsdl, $loginResult, $sforceConn)
     {
-        $soapClientArray = null;
-
-        $phpversion = substr(PHP_VERSION, 0, strpos(PHP_VERSION, '-'));
-        if ($phpversion > '5.1.2') {
-            $soapClientArray = [
-                'user_agent' => 'salesforce-toolkit-php/' . $this->version,
-                'encoding' => 'utf-8',
-                'trace' => 1,
-                'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
-                'sessionId' => $loginResult->sessionId,
-            ];
-        } else {
-            $soapClientArray = [
-                'user_agent' => 'salesforce-toolkit-php/' . $this->version,
-                'encoding' => 'utf-8',
-                'trace' => 1,
-                'sessionId' => $loginResult->sessionId,
-            ];
-        }
+        $soapClientArray = [
+            'user_agent' => 'salesforce-toolkit-php/' . $this->version,
+            'encoding' => 'utf-8',
+            'trace' => 1,
+            'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
+            'sessionId' => $loginResult->sessionId,
+        ];
         $this->sforce = new \SoapClient($wsdl, $soapClientArray);
 
         $sessionVar = [

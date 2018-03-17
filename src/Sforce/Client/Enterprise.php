@@ -41,6 +41,18 @@ class Enterprise extends Base
     }
 
     /**
+     * @inheritdoc
+     */
+    public function createConnection($wsdl = null, $proxy = null, array $soapOptions = [])
+    {
+        if ($wsdl === null) {
+            $wsdl = __DIR__ . '/../wsdl/enterprise.wsdl.xml';
+        }
+
+        return parent::createConnection($wsdl, $proxy, $soapOptions);
+    }
+
+    /**
      * Adds one or more new individual objects to your organization's data.
      *
      * @param SObject[] $sObjects Array of one or more sObjects (up to 200) to create.

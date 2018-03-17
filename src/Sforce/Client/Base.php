@@ -29,7 +29,15 @@ namespace SForce\Client;
 
 use SForce\QueryResult;
 use SForce\SearchResult;
+use SForce\Soap\AllowFieldTruncationHeader;
+use SForce\Soap\AssignmentRuleHeader;
+use SForce\Soap\EmailHeader;
+use SForce\Soap\LocaleOptions;
+use SForce\Soap\LoginScopeHeader;
+use SForce\Soap\MruHeader;
+use SForce\Soap\PackageVersionHeader;
 use SForce\Soap\QueryOptions;
+use SForce\Soap\UserTerritoryDeleteHeader;
 use SForce\SObject;
 
 abstract class Base
@@ -59,11 +67,6 @@ abstract class Base
     protected $localeOptions;
     protected $packageVersionHeader;
 
-    protected function getSoapClient($wsdl, $options)
-    {
-        return new \SoapClient($wsdl, $options);
-    }
-
     public function getNamespace()
     {
         return $this->namespace;
@@ -76,24 +79,15 @@ abstract class Base
     // Otherwise, leave this value as 'phpClient/1.0'.
     protected $client_id;
 
-    public function printDebugInfo()
+    /**
+     * @param string $wsdl
+     * @param array $options
+     *
+     * @return \SoapClient
+     */
+    protected function getSoapClient($wsdl, $options)
     {
-        echo "PHP Toolkit Version: $this->version\r\n";
-        echo 'Current PHP version: ' . PHP_VERSION;
-        echo "\r\n";
-        echo 'SOAP enabled: ';
-        if (extension_loaded('soap')) {
-            echo 'True';
-        } else {
-            echo 'False';
-        }
-        echo "\r\n";
-        echo 'OpenSSL enabled: ';
-        if (extension_loaded('openssl')) {
-            echo 'True';
-        } else {
-            echo 'False';
-        }
+        return new \SoapClient($wsdl, $options);
     }
 
     /**
@@ -102,11 +96,11 @@ abstract class Base
      * @param string $wsdl Salesforce.com Partner WSDL
      * @param null|\SForce\ProxySettings $proxy (optional) proxy settings with properties host, port,
      *                       login and password
-     * @param array $soap_options (optional) Additional options to send to the
+     * @param array $soapOptions (optional) Additional options to send to the
      *                       SoapClient constructor. @see
      *                       http://php.net/manual/en/soapclient.soapclient.php
      */
-    public function createConnection($wsdl, $proxy = null, $soap_options = [])
+    public function createConnection($wsdl, $proxy = null, array $soapOptions = [])
     {
         $soapClientArray = array_merge(
             [
@@ -116,12 +110,8 @@ abstract class Base
                 'features' => SOAP_SINGLE_ELEMENT_ARRAYS,
                 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
             ],
-            $soap_options
+            $soapOptions
         );
-
-        if (PHP_VERSION < 5.2) {
-            throw new \RuntimeException('PHP versions older than 5.2 are no longer supported. Please upgrade!');
-        }
 
         if ($proxy !== null) {
             $soapClientArray = array_merge($soapClientArray, $proxy->toArray());
@@ -325,11 +315,13 @@ abstract class Base
             }
         }
 
-
         $this->sforce->__setSoapHeaders($header_array);
     }
 
-    public function setAssignmentRuleHeader($header)
+    /**
+     * @param AssignmentRuleHeader $header
+     */
+    public function setAssignmentRuleHeader(AssignmentRuleHeader $header)
     {
         if ($header !== null) {
             $this->assignmentRuleHeader = new \SoapHeader($this->namespace, 'AssignmentRuleHeader', [
@@ -341,7 +333,10 @@ abstract class Base
         }
     }
 
-    public function setEmailHeader($header)
+    /**
+     * @param EmailHeader $header
+     */
+    public function setEmailHeader(EmailHeader $header)
     {
         if ($header !== null) {
             $this->emailHeader = new \SoapHeader($this->namespace, 'EmailHeader', [
@@ -354,7 +349,10 @@ abstract class Base
         }
     }
 
-    public function setLoginScopeHeader($header)
+    /**
+     * @param LoginScopeHeader $header
+     */
+    public function setLoginScopeHeader(LoginScopeHeader $header)
     {
         if ($header !== null) {
             $this->loginScopeHeader = new \SoapHeader($this->namespace, 'LoginScopeHeader', [
@@ -364,10 +362,12 @@ abstract class Base
         } else {
             $this->loginScopeHeader = null;
         }
-        //$this->setHeaders('login');
     }
 
-    public function setMruHeader($header)
+    /**
+     * @param MruHeader $header
+     */
+    public function setMruHeader(MruHeader $header)
     {
         if ($header !== null) {
             $this->mruHeader = new \SoapHeader($this->namespace, 'MruHeader', [
@@ -391,10 +391,13 @@ abstract class Base
         }
     }
 
-    public function setUserTerritoryDeleteHeader($header)
+    /**
+     * @param UserTerritoryDeleteHeader $header
+     */
+    public function setUserTerritoryDeleteHeader(UserTerritoryDeleteHeader $header)
     {
         if ($header !== null) {
-            $this->userTerritoryDeleteHeader = new \SoapHeader($this->namespace, 'UserTerritoryDeleteHeader  ', [
+            $this->userTerritoryDeleteHeader = new \SoapHeader($this->namespace, 'UserTerritoryDeleteHeader', [
                 'transferToUserId' => $header->transferToUserId,
             ]);
         } else {
@@ -402,7 +405,10 @@ abstract class Base
         }
     }
 
-    public function setQueryOptions($header)
+    /**
+     * @param QueryOptions $header
+     */
+    public function setQueryOptions(QueryOptions $header)
     {
         if ($header !== null) {
             $this->queryHeader = new \SoapHeader($this->namespace, 'QueryOptions', [
@@ -413,7 +419,10 @@ abstract class Base
         }
     }
 
-    public function setAllowFieldTruncationHeader($header)
+    /**
+     * @param AllowFieldTruncationHeader $header
+     */
+    public function setAllowFieldTruncationHeader(AllowFieldTruncationHeader $header)
     {
         if ($header !== null) {
             $this->allowFieldTruncationHeader = new \SoapHeader(
@@ -428,7 +437,10 @@ abstract class Base
         }
     }
 
-    public function setLocaleOptions($header)
+    /**
+     * @param LocaleOptions $header
+     */
+    public function setLocaleOptions(LocaleOptions $header)
     {
         if ($header !== null) {
             $this->localeOptions = new \SoapHeader(
@@ -444,9 +456,9 @@ abstract class Base
     }
 
     /**
-     * @param $header
+     * @param PackageVersionHeader $header
      */
-    public function setPackageVersionHeader($header)
+    public function setPackageVersionHeader(PackageVersionHeader $header)
     {
         if ($header !== null) {
             $headerData = ['packageVersions' => []];
@@ -564,40 +576,45 @@ abstract class Base
         return $this->sforce->upsert($arg)->result;
     }
 
-    public function sendSingleEmail($request)
+    /**
+     * @param array $request
+     *
+     * @return Unknown
+     */
+    public function sendSingleEmail(array $request)
     {
-        if (is_array($request)) {
-            $messages = [];
-            foreach ($request as $r) {
-                $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
-            }
-            $arg = new \stdClass();
-            $arg->messages = $messages;
-
-            return $this->_sendEmail($arg);
-        } else {
-            $backtrace = debug_backtrace();
-            die('Please pass in array to this function:  ' . $backtrace[0]['function']);
+        $messages = [];
+        foreach ($request as $r) {
+            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
         }
+        $arg = new \stdClass();
+        $arg->messages = $messages;
+
+        return $this->_sendEmail($arg);
     }
 
-    public function sendMassEmail($request)
+    /**
+     * @param array $request
+     *
+     * @return Unknown
+     */
+    public function sendMassEmail(array $request)
     {
-        if (is_array($request)) {
-            $messages = [];
-            foreach ($request as $r) {
-                $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
-            }
-            $arg = new \stdClass();
-            $arg->messages = $messages;
-
-            return $this->_sendEmail($arg);
-        } else {
-            $backtrace = debug_backtrace();
-            die('Please pass in array to this function:  ' . $backtrace[0]['function']);
+        $messages = [];
+        foreach ($request as $r) {
+            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
         }
+        $arg = new \stdClass();
+        $arg->messages = $messages;
+
+        return $this->_sendEmail($arg);
     }
 
+    /**
+     * @param $arg
+     *
+     * @return Unknown
+     */
     protected function _sendEmail($arg)
     {
         $this->setHeaders();
@@ -883,7 +900,6 @@ abstract class Base
      * the specified criteria.
      *
      * @param String $query Query String
-     * @param QueryOptions $queryOptions Batch size limit.  OPTIONAL
      *
      * @return QueryResult
      */
@@ -893,17 +909,16 @@ abstract class Base
         $raw = $this->sforce
             ->query(['queryString' => $query])
             ->result;
-        $QueryResult = new QueryResult($raw);
-        $QueryResult->setSf($this); // Dependency Injection
+        $queryResult = new QueryResult($raw);
+        $queryResult->setSf($this); // Dependency Injection
 
-        return $QueryResult;
+        return $queryResult;
     }
 
     /**
      * Retrieves the next batch of objects from a query.
      *
      * @param QueryLocator $queryLocator Represents the server-side cursor that tracks the current processing location in the query result set.
-     * @param QueryOptions $queryOptions Batch size limit.  OPTIONAL
      *
      * @return QueryResult
      */
@@ -913,10 +928,10 @@ abstract class Base
         $arg = new \stdClass();
         $arg->queryLocator = $queryLocator;
         $raw = $this->sforce->queryMore($arg)->result;
-        $QueryResult = new QueryResult($raw);
-        $QueryResult->setSf($this); // Dependency Injection
+        $queryResult = new QueryResult($raw);
+        $queryResult->setSf($this); // Dependency Injection
 
-        return $QueryResult;
+        return $queryResult;
     }
 
     /**
@@ -933,12 +948,11 @@ abstract class Base
         $raw = $this->sforce->queryAll([
             'queryString' => $query,
         ])->result;
-        $QueryResult = new QueryResult($raw);
-        $QueryResult->setSf($this); // Dependency Injection
+        $queryResult = new QueryResult($raw);
+        $queryResult->setSf($this); // Dependency Injection
 
-        return $QueryResult;
+        return $queryResult;
     }
-
 
     /**
      * Retrieves one or more objects based on the specified object IDs.
@@ -988,6 +1002,9 @@ abstract class Base
         return $this->sforce->getServerTimestamp()->result;
     }
 
+    /**
+     * @return UserInfo
+     */
     public function getUserInfo()
     {
         $this->setHeaders('getUserInfo');
@@ -998,8 +1015,10 @@ abstract class Base
     /**
      * Sets the specified user's password to the specified value.
      *
-     * @param string $userId ID of the User.
+     * @param string $userId ID of the User
      * @param string $password New password
+     *
+     * @return password
      */
     public function setPassword($userId, $password)
     {
@@ -1032,6 +1051,7 @@ abstract class Base
      * Adds one or more new individual objects to your organization's data.
      *
      * @param SObject[] $sObjects Array of one or more sObjects (up to 200) to create.
+     * @param null|string $type
      *
      * @return SaveResult
      */

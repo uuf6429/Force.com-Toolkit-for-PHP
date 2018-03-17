@@ -27,6 +27,7 @@
 
 namespace SForce\Client;
 
+use SForce\Soap\SoapClient;
 use SForce\SObject;
 
 class Partner extends Base
@@ -38,10 +39,25 @@ class Partner extends Base
         $this->namespace = self::PARTNER_NAMESPACE;
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function createConnection($wsdl = null, $proxy = null, array $soapOptions = [])
+    {
+        if ($wsdl === null) {
+            $wsdl = __DIR__ . '/../wsdl/partner.wsdl.xml';
+        }
+
+        return parent::createConnection($wsdl, $proxy, $soapOptions);
+    }
+
+    /**
+     * @inheritdoc
+     */
     protected function getSoapClient($wsdl, $options)
     {
         // Workaround an issue in parsing OldValue and NewValue in histories
-        return new \SoapClient($wsdl, $options);
+        return new SoapClient($wsdl, $options);
     }
 
     /**
@@ -79,7 +95,7 @@ class Partner extends Base
             if (isset($mergeRequest->masterRecord->fields)) {
                 $mergeRequest->masterRecord->any = $this->_convertToAny($mergeRequest->masterRecord->fields);
             }
-            //return parent::merge($mergeRequest, $type);
+            $arg = new \stdClass();
             $arg->request = $mergeRequest;
 
             return $this->_merge($arg);
@@ -88,44 +104,34 @@ class Partner extends Base
 
     /**
      *
-     * @param array $request
+     * @inheritdoc
      */
-    public function sendSingleEmail($request)
+    public function sendSingleEmail(array $request)
     {
-        if (is_array($request)) {
-            $messages = [];
-            foreach ($request as $r) {
-                $email = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
-                $messages[] = $email;
-            }
-            $arg->messages = $messages;
-
-            return parent::_sendEmail($arg);
-        } else {
-            $backtrace = debug_backtrace();
-            die('Please pass in array to this function:  ' . $backtrace[0]['function']);
+        $messages = [];
+        foreach ($request as $r) {
+            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
         }
+        $arg = new \stdClass();
+        $arg->messages = $messages;
+
+        return parent::_sendEmail($arg);
     }
 
     /**
      *
-     * @param array $request
+     * @inheritdoc
      */
-    public function sendMassEmail($request)
+    public function sendMassEmail(array $request)
     {
-        if (is_array($request)) {
-            $messages = [];
-            foreach ($request as $r) {
-                $email = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
-                $messages[] = $email;
-            }
-            $arg->messages = $messages;
-
-            return parent::_sendEmail($arg);
-        } else {
-            $backtrace = debug_backtrace();
-            die('Please pass in array to this function:  ' . $backtrace[0]['function']);
+        $messages = [];
+        foreach ($request as $r) {
+            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
         }
+        $arg = new \stdClass();
+        $arg->messages = $messages;
+
+        return parent::_sendEmail($arg);
     }
 
     /**
