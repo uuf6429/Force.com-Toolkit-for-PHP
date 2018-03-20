@@ -30,7 +30,7 @@ class TestCase extends \SForce\Test\TestCase
         ) {
             self::markTestSkipped(
                 'Test requires access to a test SalesForce system, '
-                . 'however one of SALESFORCE_USER, SALESFORCE_PASS or SALESFORCE_TOKEN'
+                . 'however one of SALESFORCE_USER, SALESFORCE_PASS or SALESFORCE_TOKEN '
                 . 'environment variables have not been set.'
             );
         }

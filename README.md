@@ -1,5 +1,11 @@
 # Force.com Toolkit for PHP
 
+[![Build Status](https://travis-ci.org/uuf6429/Force.com-Toolkit-for-PHP.svg?branch=Major-refactor)](https://travis-ci.org/uuf6429/Force.com-Toolkit-for-PHP)
+[![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%205.6-8892BF.svg)](https://php.net/)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](LICENSE)
+[![Coverage](https://codecov.io/gh/uuf6429/Force.com-Toolkit-for-PHP/branch/Major-refactor/graph/badge.svg)](https://codecov.io/github/uuf6429/Force.com-Toolkit-for-PHP?branch=Major-refactor)
+[![Packagist](https://img.shields.io/packagist/v/uuf6429/Force.com-Toolkit-for-PHP.svg)](https://packagist.org/packages/uuf6429/Force.com-Toolkit-for-PHP)
+
 The Force.com PHP Toolkit provides an easy-to-use wrapper for the Force.com Web Services SOAP API, presenting SOAP client implementations for both the enterprise and partner WSDLs.
 
 See the [getting started guide](https://developer.salesforce.com/page/PHP_Toolkit_13.0_Getting_Started) for sample code to create, retrieve, update and delete records in the Force.com database.
@@ -19,6 +25,7 @@ Here's an overview of what changed:
 - **Better Dev Env:** Contributing has become even easier. Code style is fixed automatically, running tests is easier, continuous test runs etc.
 - **Bug Fixes:** Huge amount of bugs have been fixed: whitespace in output from some files, missing variables, redundant arguments, incorrect method calls etc...
 - [**Schema Generator:**](#schema-generator) A tool for generating a rough DDL schema which you can use in your IDE to help writing SOQL queries.
+- **Badges:** Now you can quickly get an overview of the project just by looking at the summary.
 
 These changes come at a cost. The minimum supported PHP version is PHP 5.6. It _might_ work with older versions, but no guarantees.
 You should upgraded immediately if you are still using an [unsupported PHP version](http://php.net/supported-versions.php).
@@ -68,4 +75,6 @@ vendor/bin/phpunit test/Integration
 - [ ] Create tests
 - [x] Run tests against a developer edition
 - [ ] Check and set up code coverage
-- [ ] One final commit to replace `uuf6429` with `developerforce`
+- [ ] Final cleanup commit
+  - [ ] replace `uuf6429` with `developerforce` (eg; readme, composer)
+  - [ ] replace `Major-refactor` with `master` (eg; badges)
