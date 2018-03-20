@@ -33,13 +33,32 @@ composer require uuf6429/Force.com-Toolkit-for-PHP
 
 Alternatively, the library can be loaded by any [PSR-4](https://www.php-fig.org/psr/psr-4/) autoloader.
 
-## Schema Generator
+## Features
 
-The [SchemaGen class](src/SchemaGen.php) is a simple tool is provided for generating DDL for the SOAP API.
-You can use the generated schema file inside your IDE as a "DDL Data Source" (eg, in PhpStorm).
-This allows the IDE to suggest useful information when you're writing your SQL queries. Example:
+### Schema Generator
+
+The [SchemaGen class](src/SchemaGen.php) is a simple tool that generates a rough DDL for the SOAP API.
+You can use the generated SQL schema file inside your IDE as a "DDL Data Source" (eg, in PhpStorm).
+This allows the IDE to suggest useful information when you're writing your SOQL queries. Here's how it looks like:
 
 ![SchemaGen](https://imgfy.me/images/image6b7b0c2fb3239b82.png)
+
+## Testing
+
+Unit tests only require PHPUnit (installed by default via Composer), so you can simply run the following:
+
+```sh
+vendor/bin/phpunit test/Unit
+```
+
+Integration tests require a real SalesForce account and you need to provide the credentials as environment variables:
+
+```sh
+SALESFORCE_USER="john@doe.com"
+SALESFORCE_PASS="Som3p4ssw0rd"
+SALESFORCE_TOKEN="b0dca2fa0b3ef1a5bf5ba9dd6bdf0fca"
+vendor/bin/phpunit test/Integration
+```
 
 # TODO
 - [ ] Convert documentation to markdown
