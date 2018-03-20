@@ -25,19 +25,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class LoginScopeHeader
+class Mru implements HeaderInterface
 {
     /**
-     * @var null|bool Indicates whether to update the list of most recently used items (True) or not (False).
+     * @var bool Indicates whether to update the list of most recently used items (True) or not (False).
      */
-    public $organizationId;
-    public $portalId;
+    public $updateMruFlag;
 
-    public function __construct($orgId = null, $portalId = null)
+    public function __construct($updateMruFlag)
     {
-        $this->organizationId = $orgId;
-        $this->portalId = $portalId;
+        $this->updateMruFlag = $updateMruFlag;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'MruHeader',
+            [
+                'updateMru' => $this->updateMruFlag,
+            ]
+        );
     }
 }

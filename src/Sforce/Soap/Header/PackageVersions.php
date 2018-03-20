@@ -25,18 +25,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class EmailHeader
+class PackageVersions implements HeaderInterface
 {
-    public $triggerAutoResponseEmail;
-    public $triggerOtherEmail;
-    public $triggerUserEmail;
+    /**
+     * @var PackageVersion[] $packageVersions
+     */
+    public $packageVersions;
 
-    public function __construct($triggerAutoResponseEmail = false, $triggerOtherEmail = false, $triggerUserEmail = false)
+    /**
+     * @param PackageVersion[] $packageVersions
+     */
+    public function __construct($packageVersions)
     {
-        $this->triggerAutoResponseEmail = $triggerAutoResponseEmail;
-        $this->triggerOtherEmail = $triggerOtherEmail;
-        $this->triggerUserEmail = $triggerUserEmail;
+        $this->packageVersions = $packageVersions;
+    }
+
+    /**
+     * @param string $namespace
+     *
+     * @return \SoapHeader
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'PackageVersionHeader',
+            [
+                'packageVersions' => array_map(
+                    function (PackageVersion $packageVersion) {
+                        return [
+                            'majorNumber' => $packageVersion->majorNumber,
+                            'minorNumber' => $packageVersion->minorNumber,
+                            'namespace' => $packageVersion->namespace,
+                        ];
+                    },
+                    $this->packageVersions
+                )
+            ]
+        );
     }
 }

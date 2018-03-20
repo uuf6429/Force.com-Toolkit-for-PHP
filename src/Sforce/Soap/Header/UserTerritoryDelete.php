@@ -25,34 +25,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class PackageVersion
+class UserTerritoryDelete implements HeaderInterface
 {
-    /**
-     * @var int
-     */
-    public $majorNumber;
+    public $transferToUserId;
 
-    /**
-     * @var int
-     */
-    public $minorNumber;
-
-    /**
-     * @var string
-     */
-    public $namespace;
-
-    /**
-     * @param int $majorNumber
-     * @param int $minorNumber
-     * @param string $namespace
-     */
-    public function __construct($majorNumber, $minorNumber, $namespace)
+    public function __construct($transferToUserId)
     {
-        $this->majorNumber = $majorNumber;
-        $this->minorNumber = $minorNumber;
-        $this->namespace = $namespace;
+        $this->transferToUserId = $transferToUserId;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'UserTerritoryDeleteHeader',
+            [
+                'transferToUserId' => $this->transferToUserId,
+            ]
+        );
     }
 }

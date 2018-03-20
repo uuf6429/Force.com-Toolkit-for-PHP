@@ -25,14 +25,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class UserTerritoryDeleteHeader
+interface HeaderInterface
 {
-    public $transferToUserId;
-
-    public function __construct($transferToUserId)
-    {
-        $this->transferToUserId = $transferToUserId;
-    }
+    /**
+     * @param string $namespace
+     *
+     * @return \SoapHeader
+     */
+    public function asSoapHeader($namespace);
 }

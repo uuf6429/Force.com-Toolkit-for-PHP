@@ -99,7 +99,7 @@ class ContactTest extends TestCase
             'get_object_vars',
             iterator_to_array(
                 $this->getPartnerClient()
-                    ->query('SELECT Id, Name,  FROM Account')
+                    ->query('SELECT Id, Name FROM Account')
             )
         );
 

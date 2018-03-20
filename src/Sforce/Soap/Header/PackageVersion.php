@@ -25,14 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class AllowFieldTruncationHeader
+class PackageVersion
 {
-    public $allowFieldTruncation;
+    /**
+     * @var int
+     */
+    public $majorNumber;
 
-    public function __construct($allowFieldTruncation)
+    /**
+     * @var int
+     */
+    public $minorNumber;
+
+    /**
+     * @var string
+     */
+    public $namespace;
+
+    /**
+     * @param int $majorNumber
+     * @param int $minorNumber
+     * @param string $namespace
+     */
+    public function __construct($majorNumber, $minorNumber, $namespace)
     {
-        $this->allowFieldTruncation = $allowFieldTruncation;
+        $this->majorNumber = $majorNumber;
+        $this->minorNumber = $minorNumber;
+        $this->namespace = $namespace;
     }
 }

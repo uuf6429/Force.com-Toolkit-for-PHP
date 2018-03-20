@@ -25,17 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class MruHeader
+class Email implements HeaderInterface
 {
-    /**
-     * @var bool Indicates whether to update the list of most recently used items (True) or not (False).
-     */
-    public $updateMruFlag;
+    public $triggerAutoResponseEmail;
+    public $triggerOtherEmail;
+    public $triggerUserEmail;
 
-    public function __construct($updateMruFlag)
+    public function __construct($triggerAutoResponseEmail = false, $triggerOtherEmail = false, $triggerUserEmail = false)
     {
-        $this->updateMruFlag = $updateMruFlag;
+        $this->triggerAutoResponseEmail = $triggerAutoResponseEmail;
+        $this->triggerOtherEmail = $triggerOtherEmail;
+        $this->triggerUserEmail = $triggerUserEmail;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'EmailHeader',
+            [
+                'triggerAutoResponseEmail' => $this->triggerAutoResponseEmail,
+                'triggerOtherEmail' => $this->triggerOtherEmail,
+                'triggerUserEmail' => $this->triggerUserEmail,
+            ]
+        );
     }
 }

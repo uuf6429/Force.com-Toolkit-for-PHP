@@ -29,15 +29,17 @@ namespace SForce\Client;
 
 use SForce\QueryResult;
 use SForce\SearchResult;
-use SForce\Soap\AllowFieldTruncationHeader;
-use SForce\Soap\AssignmentRuleHeader;
-use SForce\Soap\EmailHeader;
-use SForce\Soap\LocaleOptions;
-use SForce\Soap\LoginScopeHeader;
-use SForce\Soap\MruHeader;
-use SForce\Soap\PackageVersionHeader;
-use SForce\Soap\QueryOptions;
-use SForce\Soap\UserTerritoryDeleteHeader;
+use SForce\Soap\Header\CallOptions;
+use SForce\Soap\Header\AllowFieldTruncation;
+use SForce\Soap\Header\AssignmentRule;
+use SForce\Soap\Header\Email;
+use SForce\Soap\Header\LocaleOptions;
+use SForce\Soap\Header\LoginScope;
+use SForce\Soap\Header\Mru;
+use SForce\Soap\Header\PackageVersions;
+use SForce\Soap\Header\QueryOptions;
+use SForce\Soap\Header\Session;
+use SForce\Soap\Header\UserTerritoryDelete;
 use SForce\SObject;
 
 abstract class Base
@@ -122,18 +124,6 @@ abstract class Base
         return $this->sforce;
     }
 
-    public function setCallOptions($header)
-    {
-        if ($header !== null) {
-            $this->callOptions = new \SoapHeader($this->namespace, 'CallOptions', [
-                'client' => $header->client,
-                'defaultNamespace' => $header->defaultNamespace,
-            ]);
-        } else {
-            $this->callOptions = null;
-        }
-    }
-
     /**
      * Login to Salesforce.com and starts a client session.
      *
@@ -196,7 +186,7 @@ abstract class Base
     protected function _setLoginHeader($loginResult)
     {
         $this->sessionId = $loginResult->sessionId;
-        $this->setSessionHeader($this->sessionId);
+        $this->setSessionHeader(new Session($this->sessionId));
         $serverURL = $loginResult->serverUrl;
         $this->setEndpoint($serverURL);
     }
@@ -323,72 +313,73 @@ abstract class Base
     }
 
     /**
-     * @param AssignmentRuleHeader $header
+     * @param CallOptions $header
      */
-    public function setAssignmentRuleHeader(AssignmentRuleHeader $header)
+    public function setCallOptions(CallOptions $header)
     {
         if ($header !== null) {
-            $this->assignmentRuleHeader = new \SoapHeader($this->namespace, 'AssignmentRuleHeader', [
-                'assignmentRuleId' => $header->assignmentRuleId,
-                'useDefaultRule' => $header->useDefaultRuleFlag,
-            ]);
+            $this->callOptions = $header->asSoapHeader($this->namespace);
+        } else {
+            $this->callOptions = null;
+        }
+    }
+
+    /**
+     * @param AssignmentRule $header
+     */
+    public function setAssignmentRuleHeader(AssignmentRule $header)
+    {
+        if ($header !== null) {
+            $this->assignmentRuleHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->assignmentRuleHeader = null;
         }
     }
 
     /**
-     * @param EmailHeader $header
+     * @param Email $header
      */
-    public function setEmailHeader(EmailHeader $header)
+    public function setEmailHeader(Email $header)
     {
         if ($header !== null) {
-            $this->emailHeader = new \SoapHeader($this->namespace, 'EmailHeader', [
-                'triggerAutoResponseEmail' => $header->triggerAutoResponseEmail,
-                'triggerOtherEmail' => $header->triggerOtherEmail,
-                'triggerUserEmail' => $header->triggerUserEmail,
-            ]);
+            $this->emailHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->emailHeader = null;
         }
     }
 
     /**
-     * @param LoginScopeHeader $header
+     * @param LoginScope $header
      */
-    public function setLoginScopeHeader(LoginScopeHeader $header)
+    public function setLoginScopeHeader(LoginScope $header)
     {
         if ($header !== null) {
-            $this->loginScopeHeader = new \SoapHeader($this->namespace, 'LoginScopeHeader', [
-                'organizationId' => $header->organizationId,
-                'portalId' => $header->portalId,
-            ]);
+            $this->loginScopeHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->loginScopeHeader = null;
         }
     }
 
     /**
-     * @param MruHeader $header
+     * @param Mru $header
      */
-    public function setMruHeader(MruHeader $header)
+    public function setMruHeader(Mru $header)
     {
         if ($header !== null) {
-            $this->mruHeader = new \SoapHeader($this->namespace, 'MruHeader', [
-                'updateMru' => $header->updateMruFlag,
-            ]);
+            $this->mruHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->mruHeader = null;
         }
     }
 
-    public function setSessionHeader($id)
+    /**
+     * @param Session $header
+     */
+    public function setSessionHeader(Session $header)
     {
-        if ($id !== null) {
-            $this->sessionHeader = new \SoapHeader($this->namespace, 'SessionHeader', [
-                'sessionId' => $id,
-            ]);
-            $this->sessionId = $id;
+        if ($header->sessionId !== null) {
+            $this->sessionHeader = $header->asSoapHeader($this->namespace);
+            $this->sessionId = $header->sessionId;
         } else {
             $this->sessionHeader = null;
             $this->sessionId = null;
@@ -396,14 +387,12 @@ abstract class Base
     }
 
     /**
-     * @param UserTerritoryDeleteHeader $header
+     * @param UserTerritoryDelete $header
      */
-    public function setUserTerritoryDeleteHeader(UserTerritoryDeleteHeader $header)
+    public function setUserTerritoryDeleteHeader(UserTerritoryDelete $header)
     {
         if ($header !== null) {
-            $this->userTerritoryDeleteHeader = new \SoapHeader($this->namespace, 'UserTerritoryDeleteHeader', [
-                'transferToUserId' => $header->transferToUserId,
-            ]);
+            $this->userTerritoryDeleteHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->userTerritoryDeleteHeader = null;
         }
@@ -415,27 +404,19 @@ abstract class Base
     public function setQueryOptions(QueryOptions $header)
     {
         if ($header !== null) {
-            $this->queryHeader = new \SoapHeader($this->namespace, 'QueryOptions', [
-                'batchSize' => $header->batchSize,
-            ]);
+            $this->queryHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->queryHeader = null;
         }
     }
 
     /**
-     * @param AllowFieldTruncationHeader $header
+     * @param AllowFieldTruncation $header
      */
-    public function setAllowFieldTruncationHeader(AllowFieldTruncationHeader $header)
+    public function setAllowFieldTruncationHeader(AllowFieldTruncation $header)
     {
         if ($header !== null) {
-            $this->allowFieldTruncationHeader = new \SoapHeader(
-                $this->namespace,
-                'AllowFieldTruncationHeader',
-                [
-                    'allowFieldTruncation' => $header->allowFieldTruncation,
-                ]
-            );
+            $this->allowFieldTruncationHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->allowFieldTruncationHeader = null;
         }
@@ -447,39 +428,19 @@ abstract class Base
     public function setLocaleOptions(LocaleOptions $header)
     {
         if ($header !== null) {
-            $this->localeOptions = new \SoapHeader(
-                $this->namespace,
-                'LocaleOptions',
-                [
-                    'language' => $header->language,
-                ]
-            );
+            $this->localeOptions = $header->asSoapHeader($this->namespace);
         } else {
             $this->localeOptions = null;
         }
     }
 
     /**
-     * @param PackageVersionHeader $header
+     * @param PackageVersions $header
      */
-    public function setPackageVersionHeader(PackageVersionHeader $header)
+    public function setPackageVersionHeader(PackageVersions $header)
     {
         if ($header !== null) {
-            $headerData = ['packageVersions' => []];
-
-            foreach ($header->packageVersions as $key => $hdrElem) {
-                $headerData['packageVersions'][] = [
-                    'majorNumber' => $hdrElem->majorNumber,
-                    'minorNumber' => $hdrElem->minorNumber,
-                    'namespace' => $hdrElem->namespace,
-                ];
-            }
-
-            $this->packageVersionHeader = new \SoapHeader(
-                $this->namespace,
-                'PackageVersionHeader',
-                $headerData
-            );
+            $this->packageVersionHeader = $header->asSoapHeader($this->namespace);
         } else {
             $this->packageVersionHeader = null;
         }

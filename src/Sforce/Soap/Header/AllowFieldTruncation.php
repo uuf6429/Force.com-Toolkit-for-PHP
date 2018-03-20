@@ -25,20 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class LocaleOptions
+class AllowFieldTruncation implements HeaderInterface
 {
     /**
-     * @var string
+     * @var bool
      */
-    public $language;
+    public $allowFieldTruncation;
 
     /**
-     * @param string $language
+     * @param bool $allowFieldTruncation
      */
-    public function __construct($language)
+    public function __construct($allowFieldTruncation)
     {
-        $this->language = $language;
+        $this->allowFieldTruncation = $allowFieldTruncation;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'AllowFieldTruncationHeader',
+            [
+                'allowFieldTruncation' => $this->allowFieldTruncation,
+            ]
+        );
     }
 }

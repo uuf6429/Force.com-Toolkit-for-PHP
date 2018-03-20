@@ -25,16 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class CallOptions
+class QueryOptions implements HeaderInterface
 {
-    public $client;
-    public $defaultNamespace;
+    /**
+     * @var int
+     */
+    public $batchSize;
 
-    public function __construct($client, $defaultNamespace = null)
+    /**
+     * @param int $limit Batch size for the number of records returned in a query or queryMore call. The default is 500; the minimum is 200, and the maximum is 2,000.
+     */
+    public function __construct($limit)
     {
-        $this->client = $client;
-        $this->defaultNamespace = $defaultNamespace;
+        $this->batchSize = $limit;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'QueryOptions',
+            [
+                'batchSize' => $this->batchSize,
+            ]
+        );
     }
 }

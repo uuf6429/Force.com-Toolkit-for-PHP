@@ -25,20 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class QueryOptions
+class LoginScope implements HeaderInterface
 {
     /**
-     * @var int
+     * @var null|bool Indicates whether to update the list of most recently used items (True) or not (False).
      */
-    public $batchSize;
+    public $organizationId;
+    public $portalId;
+
+    public function __construct($orgId = null, $portalId = null)
+    {
+        $this->organizationId = $orgId;
+        $this->portalId = $portalId;
+    }
 
     /**
-     * @param int $limit Batch size for the number of records returned in a query or queryMore call. The default is 500; the minimum is 200, and the maximum is 2,000.
+     * @inheritdoc
      */
-    public function __construct($limit)
+    public function asSoapHeader($namespace)
     {
-        $this->batchSize = $limit;
+        return new \SoapHeader(
+            $namespace,
+            'LoginScopeHeader',
+            [
+                'organizationId' => $this->organizationId,
+                'portalId' => $this->portalId,
+            ]
+        );
     }
 }

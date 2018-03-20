@@ -25,33 +25,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class AssignmentRuleHeader
+class Session implements HeaderInterface
 {
-    /**
-     * @var int|null
-     */
-    public $assignmentRuleId;
+    public $sessionId;
 
-    /**
-     * @var bool|null
-     */
-    public $useDefaultRuleFlag;
-
-    /**
-     * Constructor.  Only one param can be set.
-     *
-     * @param int $id AssignmentRuleId
-     * @param bool $flag UseDefaultRule flag
-     */
-    public function __construct($id = null, $flag = null)
+    public function __construct($sessionId)
     {
-        if ($id !== null) {
-            $this->assignmentRuleId = $id;
-        }
-        if ($flag !== null) {
-            $this->useDefaultRuleFlag = $flag;
-        }
+        $this->sessionId = $sessionId;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'SessionHeader',
+            [
+                'sessionId' => $this->sessionId,
+            ]
+        );
     }
 }

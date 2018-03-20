@@ -25,20 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Soap;
+namespace SForce\Soap\Header;
 
-class PackageVersionHeader
+class LocaleOptions implements HeaderInterface
 {
     /**
-     * @var array $packageVersions
+     * @var string
      */
-    public $packageVersions;
+    public $language;
 
     /**
-     * @param array $packageVersions
+     * @param string $language
      */
-    public function __construct($packageVersions)
+    public function __construct($language)
     {
-        $this->packageVersions = $packageVersions;
+        $this->language = $language;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function asSoapHeader($namespace)
+    {
+        return new \SoapHeader(
+            $namespace,
+            'LocaleOptions',
+            [
+                'language' => $this->language,
+            ]
+        );
     }
 }
