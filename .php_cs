@@ -9,6 +9,6 @@ return PhpCsFixer\Config::create()
     ->setFinder(
         PhpCsFixer\Finder::create()
             ->in(__DIR__)
-            ->exclude(['vendor', 'test']) // TODO test is temporary
+            ->exclude(['vendor'])
     )
     ->setUsingCache(false);

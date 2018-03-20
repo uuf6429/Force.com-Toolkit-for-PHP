@@ -42,6 +42,7 @@ class TestCase extends \SForce\Test\TestCase
     protected function getPartnerClient()
     {
         $client = new Partner();
+        $client->createConnection();
         $client->login(static::$sfUser, static::$sfPass . static::$sfToken);
 
         return $client;
@@ -53,6 +54,7 @@ class TestCase extends \SForce\Test\TestCase
     protected function getEnterpriseClient()
     {
         $client = new Enterprise();
+        $client->createConnection();
         $client->login(static::$sfUser, static::$sfPass . static::$sfToken);
 
         return $client;

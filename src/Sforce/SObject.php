@@ -29,6 +29,7 @@ namespace SForce;
 
 class SObject
 {
+    public $Id;
     public $type;
     public $fields;
 

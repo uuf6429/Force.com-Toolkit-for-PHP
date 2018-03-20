@@ -144,6 +144,10 @@ abstract class Base
      */
     public function login($username, $password)
     {
+        if (!$this->sforce) {
+            throw new \RuntimeException('Connection has not been created yet.');
+        }
+
         $this->sforce->__setSoapHeaders(null);
         if ($this->callOptions !== null) {
             $this->sforce->__setSoapHeaders([$this->callOptions]);

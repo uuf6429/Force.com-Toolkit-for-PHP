@@ -17,6 +17,8 @@ Here's an overview of what changed:
 - **Cleaner Global Scope:** Since everything was moved to the namespace, things like constants or variables have also moved.
 - **PSR-2:** Updated coding standard, also increases code quality. In particular, every class has its own file now.
 - **Better Dev Env:** Contributing has become even easier. Code style is fixed automatically, running tests is easier, continuous test runs etc.
+- **Bug Fixes:** Huge amount of bugs have been fixed: whitespace in output from some files, missing variables, redundant arguments, incorrect method calls etc...
+- [**Schema Generator:**](#schema-generator) A tool for generating a rough DDL schema which you can use in your IDE to help writing SOQL queries.
 
 These changes come at a cost. The minimum supported PHP version is PHP 5.6. It _might_ work with older versions, but no guarantees.
 You should upgraded immediately if you are still using an [unsupported PHP version](http://php.net/supported-versions.php).
@@ -31,11 +33,20 @@ composer require uuf6429/Force.com-Toolkit-for-PHP
 
 Alternatively, the library can be loaded by any [PSR-4](https://www.php-fig.org/psr/psr-4/) autoloader.
 
+## Schema Generator
+
+The [SchemaGen class](src/SchemaGen.php) is a simple tool is provided for generating DDL for the SOAP API.
+You can use the generated schema file inside your IDE as a "DDL Data Source" (eg, in PhpStorm).
+This allows the IDE to suggest useful information when you're writing your SQL queries. Example:
+
+![SchemaGen](https://imgfy.me/images/image6b7b0c2fb3239b82.png)
+
 # TODO
 - [ ] Convert documentation to markdown
   - [ ] Point "getting started" link in readme to docs
-- [ ] Use proper namespacing
-- [ ] Add dependencies to composer (eg, ext-soap)
+- [x] Use proper namespacing
+- [x] Add dependencies to composer (eg, ext-soap)
 - [ ] Create tests
-- [ ] Run tests against a developer edition
+- [x] Run tests against a developer edition
+- [ ] Check and set up code coverage
 - [ ] One final commit to replace `uuf6429` with `developerforce`
