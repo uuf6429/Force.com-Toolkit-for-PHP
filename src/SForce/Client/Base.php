@@ -44,6 +44,35 @@ use SForce\SObject;
 
 abstract class Base
 {
+    const CALL_CONVERT_LEAD = 'convertLead';
+    const CALL_CREATE = 'create';
+    const CALL_DELETE = 'delete';
+    const CALL_DESCRIBE_DATA_CATEGORY_GROUP_STRUCTURES = 'describeDataCategoryGroupStructures';
+    const CALL_DESCRIBE_DATA_CATEGORY_GROUPS = 'describeDataCategoryGroups';
+    const CALL_DESCRIBE_GLOBAL = 'describeGlobal';
+    const CALL_DESCRIBE_LAYOUT = 'describeLayout';
+    const CALL_DESCRIBE_SOBJECT = 'describeSObject';
+    const CALL_DESCRIBE_SOBJECTS = 'describeSObjects';
+    const CALL_DESCRIBE_SOFTPHONE_LAYOUT = 'describeSoftphoneLayout';
+    const CALL_DESCRIBE_TABS = 'describeTabs';
+    const CALL_GET_DELETED = 'getDeleted';
+    const CALL_GET_SERVER_TIMESTAMP = 'getServerTimestamp';
+    const CALL_GET_UPDATED = 'getUpdated';
+    const CALL_GET_USER_INFO = 'getUserInfo';
+    const CALL_LOGIN = 'login';
+    const CALL_MERGE = 'merge';
+    const CALL_PROCESS = 'process';
+    const CALL_QUERY = 'query';
+    const CALL_QUERY_ALL = 'queryAll';
+    const CALL_QUERY_MORE = 'queryMore';
+    const CALL_RESET_PASSWORD = 'resetPassword';
+    const CALL_RETRIEVE = 'retrieve';
+    const CALL_SEARCH = 'search';
+    const CALL_SET_PASSWORD = 'setPassword';
+    const CALL_UNDELETE = 'undelete';
+    const CALL_UPDATE = 'update';
+    const CALL_UPSERT = 'upsert';
+
     /**
      * @var \SoapClient
      */
@@ -101,6 +130,7 @@ abstract class Base
      * @param array $soapOptions (optional) Additional options to send to the
      *                       SoapClient constructor. @see
      *                       http://php.net/manual/en/soapclient.soapclient.php
+     * @return \SoapClient
      */
     public function createConnection($wsdl, $proxy = null, array $soapOptions = [])
     {
@@ -202,6 +232,9 @@ abstract class Base
         $this->sforce->__setLocation($location);
     }
 
+    /**
+     * @param null|string $call One of self::CALL_* constants.
+     */
     private function setHeaders($call = null)
     {
         $this->sforce->__setSoapHeaders(null);
@@ -215,42 +248,63 @@ abstract class Base
             $header_array[] = $header;
         }
 
-        if (in_array($call, ['create', 'merge', 'update', 'upsert'], true)) {
+        if (in_array($call, [
+            static::CALL_CREATE,
+            static::CALL_MERGE,
+            static::CALL_UPDATE,
+            static::CALL_UPSERT,
+        ], true)) {
             $header = $this->assignmentRuleHeader;
             if ($header !== null) {
                 $header_array[] = $header;
             }
         }
 
-        if ($call === 'login') {
+        if ($call === static::CALL_LOGIN) {
             $header = $this->loginScopeHeader;
             if ($header !== null) {
                 $header_array[] = $header;
             }
         }
 
-        if (in_array($call, ['create', 'resetPassword', 'update', 'upsert'], true)) {
+        if (in_array($call, [
+            static::CALL_CREATE,
+            static::CALL_RESET_PASSWORD,
+            static::CALL_UPDATE,
+            static::CALL_UPSERT,
+        ], true)) {
             $header = $this->emailHeader;
             if ($header !== null) {
                 $header_array[] = $header;
             }
         }
 
-        if (in_array($call, ['create', 'merge', 'query', 'retrieve', 'update', 'upsert'], true)) {
+        if (in_array($call, [
+            static::CALL_CREATE,
+            static::CALL_MERGE,
+            static::CALL_QUERY,
+            static::CALL_RETRIEVE,
+            static::CALL_UPDATE,
+            static::CALL_UPSERT,
+        ], true)) {
             $header = $this->mruHeader;
             if ($header !== null) {
                 $header_array[] = $header;
             }
         }
 
-        if ($call === 'delete') {
+        if ($call === static::CALL_DELETE) {
             $header = $this->userTerritoryDeleteHeader;
             if ($header !== null) {
                 $header_array[] = $header;
             }
         }
 
-        if (in_array($call, ['query', 'queryMore', 'retrieve'], true)) {
+        if (in_array($call, [
+            static::CALL_QUERY,
+            static::CALL_QUERY_MORE,
+            static::CALL_RETRIEVE,
+        ], true)) {
             $header = $this->queryHeader;
             if ($header !== null) {
                 $header_array[] = $header;
@@ -258,16 +312,15 @@ abstract class Base
         }
 
         // try to add allowFieldTruncationHeader
-        $allowFieldTruncationHeaderCalls = [
-            'convertLead',
-            'create',
-            'merge',
-            'process',
-            'undelete',
-            'update',
-            'upsert',
-        ];
-        if (in_array($call, $allowFieldTruncationHeaderCalls, true)) {
+        if (in_array($call, [
+            static::CALL_CONVERT_LEAD,
+            static::CALL_CREATE,
+            static::CALL_MERGE,
+            static::CALL_PROCESS,
+            static::CALL_UNDELETE,
+            static::CALL_UPDATE,
+            static::CALL_UPSERT,
+        ], true)) {
             $header = $this->allowFieldTruncationHeader;
             if ($header !== null) {
                 $header_array[] = $header;
@@ -275,7 +328,9 @@ abstract class Base
         }
 
         // try to add localeOptions
-        if ($call === 'describeSObject' || $call === 'describeSObjects') {
+        if ($call === static::CALL_DESCRIBE_SOBJECT
+            || $call === static::CALL_DESCRIBE_SOBJECTS
+        ) {
             $header = $this->localeOptions;
             if ($header !== null) {
                 $header_array[] = $header;
@@ -284,23 +339,23 @@ abstract class Base
 
         // try to add PackageVersionHeader
         $packageVersionHeaderCalls = [
-            'convertLead',
-            'create',
-            'delete',
-            'describeGlobal',
-            'describeLayout',
-            'describeSObject',
-            'describeSObjects',
-            'describeSoftphoneLayout',
-            'describeTabs',
-            'merge',
-            'process',
-            'query',
-            'retrieve',
-            'search',
-            'undelete',
-            'update',
-            'upsert',
+            static::CALL_CONVERT_LEAD,
+            static::CALL_CREATE,
+            static::CALL_DELETE,
+            static::CALL_DESCRIBE_GLOBAL,
+            static::CALL_DESCRIBE_LAYOUT,
+            static::CALL_DESCRIBE_SOBJECT,
+            static::CALL_DESCRIBE_SOBJECTS,
+            static::CALL_DESCRIBE_SOFTPHONE_LAYOUT,
+            static::CALL_DESCRIBE_TABS,
+            static::CALL_MERGE,
+            static::CALL_PROCESS,
+            static::CALL_QUERY,
+            static::CALL_RETRIEVE,
+            static::CALL_SEARCH,
+            static::CALL_UNDELETE,
+            static::CALL_UPDATE,
+            static::CALL_UPSERT,
         ];
         if (in_array($call, $packageVersionHeaderCalls, true)) {
             $header = $this->packageVersionHeader;
@@ -508,14 +563,14 @@ abstract class Base
 
     protected function _create($arg)
     {
-        $this->setHeaders('create');
+        $this->setHeaders(static::CALL_CREATE);
 
         return $this->sforce->create($arg)->result;
     }
 
     protected function _merge($arg)
     {
-        $this->setHeaders('merge');
+        $this->setHeaders(static::CALL_MERGE);
 
         return $this->sforce->merge($arg)->result;
     }
@@ -529,14 +584,14 @@ abstract class Base
 
     protected function _update($arg)
     {
-        $this->setHeaders('update');
+        $this->setHeaders(static::CALL_UPDATE);
 
         return $this->sforce->update($arg)->result;
     }
 
     protected function _upsert($arg)
     {
-        $this->setHeaders('upsert');
+        $this->setHeaders(static::CALL_UPSERT);
 
         return $this->sforce->upsert($arg)->result;
     }
@@ -596,7 +651,7 @@ abstract class Base
      */
     public function convertLead($leadConverts)
     {
-        $this->setHeaders('convertLead');
+        $this->setHeaders(static::CALL_CONVERT_LEAD);
         $arg = new \stdClass();
         $arg->leadConverts = $leadConverts;
 
@@ -612,7 +667,7 @@ abstract class Base
      */
     public function delete($ids)
     {
-        $this->setHeaders('delete');
+        $this->setHeaders(static::CALL_DELETE);
         if (count($ids) > 200) {
             $result = [];
             $chunked_ids = array_chunk($ids, 200);
@@ -639,7 +694,7 @@ abstract class Base
      */
     public function undelete($ids)
     {
-        $this->setHeaders('undelete');
+        $this->setHeaders(static::CALL_UNDELETE);
         $arg = new \stdClass();
         $arg->ids = $ids;
 
@@ -709,7 +764,7 @@ abstract class Base
      */
     public function describeGlobal()
     {
-        $this->setHeaders('describeGlobal');
+        $this->setHeaders(static::CALL_DESCRIBE_GLOBAL);
 
         return $this->sforce->describeGlobal()->result;
     }
@@ -727,7 +782,7 @@ abstract class Base
      */
     public function describeLayout($type, array $recordTypeIds = null)
     {
-        $this->setHeaders('describeLayout');
+        $this->setHeaders(static::CALL_DESCRIBE_LAYOUT);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
         if (isset($recordTypeIds) && count($recordTypeIds)) {
@@ -747,7 +802,7 @@ abstract class Base
      */
     public function describeSObject($type)
     {
-        $this->setHeaders('describeSObject');
+        $this->setHeaders(static::CALL_DESCRIBE_SOBJECT);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
@@ -764,7 +819,7 @@ abstract class Base
      */
     public function describeSObjects($arrayOfTypes)
     {
-        $this->setHeaders('describeSObjects');
+        $this->setHeaders(static::CALL_DESCRIBE_SOBJECTS);
 
         return $this->sforce->describeSObjects($arrayOfTypes)->result;
     }
@@ -778,7 +833,7 @@ abstract class Base
      */
     public function describeTabs()
     {
-        $this->setHeaders('describeTabs');
+        $this->setHeaders(static::CALL_DESCRIBE_TABS);
 
         return $this->sforce->describeTabs()->result;
     }
@@ -793,7 +848,7 @@ abstract class Base
      */
     public function describeDataCategoryGroups($sObjectType)
     {
-        $this->setHeaders('describeDataCategoryGroups');
+        $this->setHeaders(static::CALL_DESCRIBE_DATA_CATEGORY_GROUPS);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($sObjectType, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
@@ -810,7 +865,7 @@ abstract class Base
      */
     public function describeDataCategoryGroupStructures(array $pairs, $topCategoriesOnly)
     {
-        $this->setHeaders('describeDataCategoryGroupStructures');
+        $this->setHeaders(static::CALL_DESCRIBE_DATA_CATEGORY_GROUP_STRUCTURES);
         $arg = new \stdClass();
         $arg->pairs = $pairs;
         $arg->topCategoriesOnly = new \SoapVar($topCategoriesOnly, XSD_BOOLEAN, 'boolean', 'http://www.w3.org/2001/XMLSchema');
@@ -830,7 +885,7 @@ abstract class Base
      */
     public function getDeleted($type, $startDate, $endDate)
     {
-        $this->setHeaders('getDeleted');
+        $this->setHeaders(static::CALL_GET_DELETED);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
         $arg->startDate = $startDate;
@@ -851,7 +906,7 @@ abstract class Base
      */
     public function getUpdated($type, $startDate, $endDate)
     {
-        $this->setHeaders('getUpdated');
+        $this->setHeaders(static::CALL_GET_UPDATED);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
         $arg->startDate = $startDate;
@@ -870,7 +925,7 @@ abstract class Base
      */
     public function query($query)
     {
-        $this->setHeaders('query');
+        $this->setHeaders(static::CALL_QUERY);
         $raw = $this->sforce
             ->query(['queryString' => $query])
             ->result;
@@ -889,7 +944,7 @@ abstract class Base
      */
     public function queryMore($queryLocator)
     {
-        $this->setHeaders('queryMore');
+        $this->setHeaders(static::CALL_QUERY_MORE);
         $arg = new \stdClass();
         $arg->queryLocator = $queryLocator;
         $raw = $this->sforce->queryMore($arg)->result;
@@ -909,7 +964,7 @@ abstract class Base
      */
     public function queryAll($query, $queryOptions = null)
     {
-        $this->setHeaders('queryAll');
+        $this->setHeaders(static::CALL_QUERY_ALL);
         $raw = $this->sforce->queryAll([
             'queryString' => $query,
         ])->result;
@@ -930,7 +985,7 @@ abstract class Base
      */
     public function retrieve($fieldList, $sObjectType, $ids)
     {
-        $this->setHeaders('retrieve');
+        $this->setHeaders(static::CALL_RETRIEVE);
         $arg = new \stdClass();
         $arg->fieldList = $fieldList;
         $arg->sObjectType = new \SoapVar($sObjectType, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
@@ -948,7 +1003,7 @@ abstract class Base
      */
     public function search($searchString)
     {
-        $this->setHeaders('search');
+        $this->setHeaders(static::CALL_SEARCH);
         $arg = new \stdClass();
         $arg->searchString = new \SoapVar($searchString, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
@@ -962,7 +1017,7 @@ abstract class Base
      */
     public function getServerTimestamp()
     {
-        $this->setHeaders('getServerTimestamp');
+        $this->setHeaders(static::CALL_GET_SERVER_TIMESTAMP);
 
         return $this->sforce->getServerTimestamp()->result;
     }
@@ -972,7 +1027,7 @@ abstract class Base
      */
     public function getUserInfo()
     {
-        $this->setHeaders('getUserInfo');
+        $this->setHeaders(static::CALL_GET_USER_INFO);
 
         return $this->sforce->getUserInfo()->result;
     }
@@ -987,7 +1042,7 @@ abstract class Base
      */
     public function setPassword($userId, $password)
     {
-        $this->setHeaders('setPassword');
+        $this->setHeaders(static::CALL_SET_PASSWORD);
         $arg = new \stdClass();
         $arg->userId = new \SoapVar($userId, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
         $arg->password = $password;
@@ -1004,7 +1059,7 @@ abstract class Base
      */
     public function resetPassword($userId)
     {
-        $this->setHeaders('resetPassword');
+        $this->setHeaders(static::CALL_RESET_PASSWORD);
         $arg = new \stdClass();
         $arg->userId = new \SoapVar($userId, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
