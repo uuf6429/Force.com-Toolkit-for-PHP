@@ -29,6 +29,21 @@ namespace SForce\Meta;
 
 class CustomObject
 {
+    const DEPLOYMENT_STATUS_IN_DEVELOPMENT = 'InDevelopment';
+    const DEPLOYMENT_STATUS_DEPLOYED = 'Deployed';
+
+    const GENDER_NEUTER = 'Neuter';
+    const GENDER_MASCULINE = 'Masculine';
+    const GENDER_FEMININE = 'Feminine';
+
+    const SHARING_MODEL_PRIVATE = 'Private';
+    const SHARING_MODEL_READ = 'Read';
+    const SHARING_MODEL_READWRITE = 'ReadWrite';
+
+    const STARTS_WITH_CONSONANT = 'Consonant';
+    const STARTS_WITH_VOWEL = 'Vowel';
+    const STARTS_WITH_SPECIAL = 'Special';
+
     public $startsWith;
     public $sharingModel;
     public $pluralLabel;
@@ -45,6 +60,9 @@ class CustomObject
     public $description;
     public $deploymentStatus;
 
+    /**
+     * @param string $deploymentStatus Value from self::DEPLOYMENT_STATUS_* constants.
+     */
     public function setDeploymentStatus($deploymentStatus)
     {
         $this->deploymentStatus = $deploymentStatus;
@@ -85,6 +103,9 @@ class CustomObject
         $this->fullName = $fullName;
     }
 
+    /**
+     * @param string $gender Value from self::GENDER_* constants.
+     */
     public function setGender($gender)
     {
         $this->gender = $gender;
@@ -110,11 +131,17 @@ class CustomObject
         $this->pluralLabel = $pluralLabel;
     }
 
+    /**
+     * @param string $sharingModel Value from self::SHARING_MODEL_* constants.
+     */
     public function setSharingModel($sharingModel)
     {
         $this->sharingModel = $sharingModel;
     }
 
+    /**
+     * @param string $startsWith Value from self::STARTS_WITH_* constants.
+     */
     public function setStartsWith($startsWith)
     {
         $this->startsWith = $startsWith;

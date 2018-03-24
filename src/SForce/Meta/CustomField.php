@@ -29,6 +29,9 @@ namespace SForce\Meta;
 
 class CustomField
 {
+    const TREAT_BLANKS_AS_BLANK = 'BlankAsBlank';
+    const TREAT_BLANKS_AS_ZERO = 'BlankAsZero';
+
     public $visibleLines;
     public $unique;
     public $type;
@@ -88,6 +91,9 @@ class CustomField
         $this->formula = $formula;
     }
 
+    /**
+     * @param string $formulaTreatBlankAs Value from self::TREAT_BLANKS_* constants.
+     */
     public function setFormulaTreatBlankAs($formulaTreatBlankAs)
     {
         $this->formulaTreatBlankAs = $formulaTreatBlankAs;

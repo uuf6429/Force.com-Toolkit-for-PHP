@@ -33,7 +33,11 @@ class SObject
     public $type;
     public $fields;
 
-    public function __construct($response = null)
+    /**
+     * @param null|\stdClass $response
+     * @param Client\Base $sfClient
+     */
+    public function __construct($response, Client\Base $sfClient)
     {
         if (!$response) {
             return;
@@ -55,102 +59,68 @@ class SObject
         }
 
         if (isset($response->any)) {
-            try {
-                //$this->fields = $this->convertFields($response->any);
-                // If ANY is an object, instantiate another SObject
-                if ($response->any instanceof \stdClass) {
-                    if ($this->isSObject($response->any)) {
-                        $anArray = [];
-                        $sobject = new SObject($response->any);
-                        $anArray[] = $sobject;
-                        $this->sobjects = $anArray;
-                    } else {
-                        // this is for parent to child relationships
-                        $this->queryResult = new QueryResult($response->any);
+            //$this->fields = $this->convertFields($response->any);
+            // If ANY is an object, instantiate another SObject
+            if ($response->any instanceof \stdClass) {
+                if ($this->isSObject($response->any)) {
+                    $anArray = [];
+                    $sobject = new SObject($response->any, $sfClient);
+                    $anArray[] = $sobject;
+                    $this->sobjects = $anArray;
+                } else {
+                    // this is for parent to child relationships
+                    $this->queryResult = new QueryResult($response->any, $sfClient);
+                }
+            } else {
+                // If ANY is an array
+                if (is_array($response->any)) {
+                    // Loop through each and perform some action.
+                    $anArray = [];
+
+                    // Modify the foreach to have $key=>$value
+                    // Added on 28th April 2008
+                    foreach ($response->any as $key => $item) {
+                        if ($item instanceof \stdClass) {
+                            if ($this->isSObject($item)) {
+                                // make an associative array instead of a numeric one
+                                $anArray[$key] = new SObject($item, $sfClient);
+                            } else {
+                                // this is for parent to child relationships
+                                //$this->queryResult = new QueryResult($item);
+                                if (!isset($this->queryResult)) {
+                                    $this->queryResult = [];
+                                }
+                                $this->queryResult[] = new QueryResult($item, $sfClient);
+                            }
+                        } else {
+                            //$this->fields = $this->convertFields($item);
+
+                            if (strpos($item, 'sf:') === false) {
+                                $currentXmlValue = sprintf('<sf:%s>%s</sf:%s>', $key, $item, $key);
+                            } else {
+                                $currentXmlValue = $item;
+                            }
+
+                            if (!isset($fieldsToConvert)) {
+                                $fieldsToConvert = $currentXmlValue;
+                            } else {
+                                $fieldsToConvert .= $currentXmlValue;
+                            }
+                        }
+                    }
+
+                    if (isset($fieldsToConvert)) {
+                        $this->fields = $this->convertFields($fieldsToConvert);
+                    }
+
+                    if (count($anArray)) {
+                        foreach ($anArray as $key => $children_sobject) {
+                            $this->fields->$key = $children_sobject;
+                        }
                     }
                 } else {
-                    // If ANY is an array
-                    if (is_array($response->any)) {
-                        // Loop through each and perform some action.
-                        $anArray = [];
-
-                        // Modify the foreach to have $key=>$value
-                        // Added on 28th April 2008
-                        foreach ($response->any as $key => $item) {
-                            if ($item instanceof \stdClass) {
-                                if ($this->isSObject($item)) {
-                                    // make an associative array instead of a numeric one
-                                    $anArray[$key] = new SObject($item);
-                                } else {
-                                    // this is for parent to child relationships
-                                    //$this->queryResult = new QueryResult($item);
-                                    if (!isset($this->queryResult)) {
-                                        $this->queryResult = [];
-                                    }
-                                    $this->queryResult[] = new QueryResult($item);
-                                }
-                            } else {
-                                //$this->fields = $this->convertFields($item);
-
-                                if (strpos($item, 'sf:') === false) {
-                                    $currentXmlValue = sprintf('<sf:%s>%s</sf:%s>', $key, $item, $key);
-                                } else {
-                                    $currentXmlValue = $item;
-                                }
-
-                                if (!isset($fieldsToConvert)) {
-                                    $fieldsToConvert = $currentXmlValue;
-                                } else {
-                                    $fieldsToConvert .= $currentXmlValue;
-                                }
-                            }
-                        }
-
-                        if (isset($fieldsToConvert)) {
-                            // If this line is commented, then the fields becomes a stdclass object and does not have the name variable
-                            // In this case the foreach loop on line 252 runs successfuly
-                            $this->fields = $this->convertFields($fieldsToConvert);
-                        }
-
-                        if (count($anArray)) {
-                            // To add more variables to the the top level sobject
-                            foreach ($anArray as $key => $children_sobject) {
-                                $this->fields->$key = $children_sobject;
-                            }
-                            //array_push($this->fields, $anArray);
-                            // Uncommented on 28th April since all the sobjects have now been moved to the fields
-                            //$this->sobjects = $anArray;
-                        }
-
-                        /*
-                           $this->fields = $this->convertFields($response->any[0]);
-                           if (isset($response->any[1]->records)) {
-                           $anArray = array();
-                           if ($response->any[1]->size == 1) {
-                           $records = array (
-                           $response->any[1]->records
-                           );
-                           } else {
-                           $records = $response->any[1]->records;
-                           }
-                           foreach ($records as $record) {
-                           $sobject = new SObject($record);
-                           array_push($anArray, $sobject);
-                           }
-                           $this->sobjects = $anArray;
-                           } else {
-                           $anArray = array();
-                           $sobject = new SObject($response->any[1]);
-                           array_push($anArray, $sobject);
-                           $this->sobjects = $anArray;
-                           }
-                         */
-                    } else {
-                        $this->fields = $this->convertFields($response->any);
-                    }
+                    $this->fields = $this->convertFields($response->any);
                 }
-            } catch (\Exception $e) {
-                var_dump('exception: ', $e);
             }
         }
     }

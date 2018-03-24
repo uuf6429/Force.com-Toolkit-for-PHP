@@ -36,8 +36,9 @@ class SearchResult
 
     /**
      * @param \stdClass $response
+     * @param Client\Base $sfClient
      */
-    public function __construct($response)
+    public function __construct($response, Client\Base $sfClient)
     {
         if ($response instanceof self) {
             $this->searchRecords = $response->searchRecords;
@@ -46,10 +47,10 @@ class SearchResult
             if (property_exists($response, 'searchRecords')) {
                 if (is_array($response->searchRecords)) {
                     foreach ($response->searchRecords as $record) {
-                        $this->searchRecords[] = new SObject($record->record);
+                        $this->searchRecords[] = new SObject($record->record, $sfClient);
                     }
                 } elseif (property_exists($response->searchRecords, 'record')) {
-                    $this->searchRecords[] = new SObject($response->searchRecords->record);
+                    $this->searchRecords[] = new SObject($response->searchRecords->record, $sfClient);
                 }
             }
         }

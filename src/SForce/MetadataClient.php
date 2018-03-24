@@ -48,7 +48,6 @@ class MetadataClient
 
     /**
      * @var string
-     * @todo Is this needed? Maybe we can just read it from composer, or overwrite it with the git thingy
      */
     protected $version = '27.0';
 

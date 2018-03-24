@@ -203,10 +203,10 @@ class Partner extends Base
         $arr = [];
         if (is_array($response)) {
             foreach ($response as $r) {
-                $arr[] = new SObject($r);
+                $arr[] = new SObject($r, $this);
             }
         } else {
-            $arr[] = new SObject($response);
+            $arr[] = new SObject($response, $this);
         }
 
         return $arr;

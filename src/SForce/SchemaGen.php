@@ -2,6 +2,8 @@
 
 namespace SForce;
 
+use SForce\Exception\UnsupportedFieldTypeException;
+
 /**
  * This class generates simplified DDL schema for a given SF connection. The generated
  * DDL is particularly useful when developing SOQL queries; you can configure your IDE
@@ -82,6 +84,8 @@ class SchemaGen
      * @param \stdClass $field
      *
      * @return string
+     *
+     * @throws UnsupportedFieldTypeException
      */
     protected function generateFieldDDL($field)
     {
@@ -150,7 +154,7 @@ class SchemaGen
                 return "$field->name TEXT $allowNull";
 
             default:
-                throw new \RuntimeException("Unsupported field type: $field->type");
+                throw new UnsupportedFieldTypeException($field->type);
         }
     }
 }

@@ -27,6 +27,7 @@
 
 namespace SForce\Client;
 
+use SForce\Exception\NotConnectedException;
 use SForce\QueryResult;
 use SForce\SearchResult;
 use SForce\Soap\Header\CallOptions;
@@ -161,11 +162,13 @@ abstract class Base
      * @param string $password Password
      *
      * @return LoginResult
+     *
+     * @throws NotConnectedException
      */
     public function login($username, $password)
     {
         if (!$this->sforce) {
-            throw new \RuntimeException('Connection has not been created yet.');
+            throw new NotConnectedException('Connection has not been created yet.');
         }
 
         $this->sforce->__setSoapHeaders(null);
@@ -929,10 +932,8 @@ abstract class Base
         $raw = $this->sforce
             ->query(['queryString' => $query])
             ->result;
-        $queryResult = new QueryResult($raw);
-        $queryResult->setSf($this); // Dependency Injection
 
-        return $queryResult;
+        return new QueryResult($raw, $this);
     }
 
     /**
@@ -948,10 +949,8 @@ abstract class Base
         $arg = new \stdClass();
         $arg->queryLocator = $queryLocator;
         $raw = $this->sforce->queryMore($arg)->result;
-        $queryResult = new QueryResult($raw);
-        $queryResult->setSf($this); // Dependency Injection
 
-        return $queryResult;
+        return new QueryResult($raw, $this);
     }
 
     /**
@@ -968,10 +967,8 @@ abstract class Base
         $raw = $this->sforce->queryAll([
             'queryString' => $query,
         ])->result;
-        $queryResult = new QueryResult($raw);
-        $queryResult->setSf($this); // Dependency Injection
 
-        return $queryResult;
+        return new QueryResult($raw, $this);
     }
 
     /**
@@ -1007,7 +1004,7 @@ abstract class Base
         $arg = new \stdClass();
         $arg->searchString = new \SoapVar($searchString, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        return new SforceSearchResult($this->sforce->search($arg)->result);
+        return new SearchResult($this->sforce->search($arg)->result, $this);
     }
 
     /**

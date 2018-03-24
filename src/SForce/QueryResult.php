@@ -27,24 +27,30 @@
 
 namespace SForce;
 
+use SForce\Exception\UnexpectedCodeFlowReachedException;
+
 class QueryResult implements \Iterator
 {
-    public $queryLocator;
-    public $done;
-    public $records;
-    public $size;
+    private $queryLocator;
+    private $done;
+    private $records;
+    private $pointer; // Current iterator location
 
-    public $pointer; // Current iterator location
-    private $sf; // SOAP Client
+    /**
+     * @var Client\Base
+     */
+    private $sfClient; // SOAP Client
 
-    public function __construct($response)
+    /**
+     * @param $response
+     * @param Client\Base $sfClient
+     */
+    public function __construct($response, Client\Base $sfClient)
     {
         $this->queryLocator = $response->queryLocator;
         $this->done = $response->done;
-        $this->size = $response->size;
-
         $this->pointer = 0;
-        $this->sf = false;
+        $this->sfClient = $sfClient;
 
         if ($response instanceof self) {
             $this->records = $response->records;
@@ -62,12 +68,6 @@ class QueryResult implements \Iterator
         }
     }
 
-    public function setSf(Client\Base $sf)
-    {
-        $this->sf = $sf;
-    } // Dependency Injection
-
-    // Basic Iterator implementation functions
     public function rewind()
     {
         $this->pointer = 0;
@@ -85,7 +85,7 @@ class QueryResult implements \Iterator
 
     public function current()
     {
-        return new SObject($this->records[$this->pointer]);
+        return new SObject($this->records[$this->pointer], $this->sfClient);
     }
 
     public function valid()
@@ -93,10 +93,7 @@ class QueryResult implements \Iterator
         while ($this->pointer >= count($this->records)) {
             // Pointer is larger than (current) result set; see if we can fetch more
             if ($this->done === false) {
-                if ($this->sf === false) {
-                    throw new \Exception('Dependency not met!');
-                }
-                $response = $this->sf->queryMore($this->queryLocator);
+                $response = $this->sfClient->queryMore($this->queryLocator);
                 $this->records = array_merge($this->records, $response->records); // Append more results
                 $this->done = $response->done;
                 $this->queryLocator = $response->queryLocator;
@@ -108,6 +105,6 @@ class QueryResult implements \Iterator
             return true;
         }
 
-        throw new \Exception('QueryResult has gaps in the record data?');
+        throw new UnexpectedCodeFlowReachedException('QueryResult has gaps in the record data?');
     }
 }
