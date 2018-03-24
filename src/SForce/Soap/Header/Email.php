@@ -30,10 +30,26 @@ namespace SForce\Soap\Header;
 
 class Email implements HeaderInterface
 {
+    /**
+     * @var bool
+     */
     public $triggerAutoResponseEmail;
+
+    /**
+     * @var bool
+     */
     public $triggerOtherEmail;
+
+    /**
+     * @var bool
+     */
     public $triggerUserEmail;
 
+    /**
+     * @param bool $triggerAutoResponseEmail
+     * @param bool $triggerOtherEmail
+     * @param bool $triggerUserEmail
+     */
     public function __construct($triggerAutoResponseEmail = false, $triggerOtherEmail = false, $triggerUserEmail = false)
     {
         $this->triggerAutoResponseEmail = $triggerAutoResponseEmail;

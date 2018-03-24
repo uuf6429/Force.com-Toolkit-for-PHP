@@ -42,6 +42,8 @@ use SForce\Soap\Header\PackageVersions;
 use SForce\Soap\Header\QueryOptions;
 use SForce\Soap\Header\Session;
 use SForce\Soap\Header\UserTerritoryDelete;
+use SForce\Soap\Response\LoginResult;
+use SForce\Soap\Response\LogoutResult;
 use SForce\SObject;
 
 abstract class Base
@@ -183,7 +185,7 @@ abstract class Base
             'username' => $username,
             'password' => $password,
         ]);
-        $result = $result->result;
+        $result = new LoginResult((array)$result->result);
         $this->_setLoginHeader($result);
 
         return $result;
@@ -198,7 +200,9 @@ abstract class Base
     {
         $this->setHeaders('logout');
 
-        return $this->sforce->logout();
+        $result = $this->sforce->logout();
+
+        return new LogoutResult((array)$result->result);
     }
 
     /**
@@ -216,8 +220,10 @@ abstract class Base
 
     /**
      * Specifies the session ID returned from the login server after a successful login.
+     *
+     * @param LoginResult $loginResult
      */
-    protected function _setLoginHeader($loginResult)
+    protected function _setLoginHeader(LoginResult $loginResult)
     {
         $this->sessionId = $loginResult->sessionId;
         $this->setSessionHeader(new Session($this->sessionId));

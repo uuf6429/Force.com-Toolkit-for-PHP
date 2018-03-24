@@ -41,8 +41,6 @@ class AssignmentRule implements HeaderInterface
     public $useDefaultRuleFlag;
 
     /**
-     * Constructor.  Only one param can be set.
-     *
      * @param int $id AssignmentRuleId
      * @param bool $flag UseDefaultRule flag
      */

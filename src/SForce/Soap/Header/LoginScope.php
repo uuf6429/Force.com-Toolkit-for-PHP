@@ -30,9 +30,6 @@ namespace SForce\Soap\Header;
 
 class LoginScope implements HeaderInterface
 {
-    /**
-     * @var null|bool Indicates whether to update the list of most recently used items (True) or not (False).
-     */
     public $organizationId;
     public $portalId;
 

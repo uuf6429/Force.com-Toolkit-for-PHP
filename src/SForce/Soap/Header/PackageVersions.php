@@ -38,7 +38,7 @@ class PackageVersions implements HeaderInterface
     /**
      * @param PackageVersion[] $packageVersions
      */
-    public function __construct($packageVersions)
+    public function __construct(array $packageVersions)
     {
         $this->packageVersions = $packageVersions;
     }

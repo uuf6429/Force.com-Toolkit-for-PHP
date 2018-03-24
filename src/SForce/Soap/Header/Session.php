@@ -30,8 +30,14 @@ namespace SForce\Soap\Header;
 
 class Session implements HeaderInterface
 {
+    /**
+     * @var string
+     */
     public $sessionId;
 
+    /**
+     * @param string $sessionId
+     */
     public function __construct($sessionId)
     {
         $this->sessionId = $sessionId;
