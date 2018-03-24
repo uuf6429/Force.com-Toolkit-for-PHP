@@ -39,11 +39,15 @@ abstract class ValueObject
     private $data = [];
 
     /**
-     * @param array $data
+     * @param null|array $data
      */
-    public function __construct(array $data)
+    public function __construct(array $data = null)
     {
-        $this->fromArray($data);
+        if ($data === null) {
+            $this->data = array_fill_keys($this->getProperties(), null);
+        } else {
+            $this->fromArray($data);
+        }
     }
 
     /**
