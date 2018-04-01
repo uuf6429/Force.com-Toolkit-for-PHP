@@ -46,7 +46,7 @@ class Partner extends Base
     public function createConnection($wsdl = null, $proxy = null, array $soapOptions = [])
     {
         if ($wsdl === null) {
-            $wsdl = __DIR__ . '/../wsdl/partner.wsdl.xml';
+            $wsdl = __DIR__ . '/../Wsdl/partner.wsdl.xml';
         }
 
         return parent::createConnection($wsdl, $proxy, $soapOptions);

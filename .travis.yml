@@ -46,6 +46,8 @@ script:
       "-Dsonar.projectKey=Force.com-Toolkit-for-PHP" \
       "-Dsonar.php.tests.reportPath=junit.xml" \
       "-Dsonar.php.coverage.reportPaths=clover.xml" \
-      "-Dsonar.sources=./src" \
-      "-Dsonar.tests=./test" \
+      "-Dsonar.sources=src" \
+      "-Dsonar.tests=test" \
+      "-Dsonar.exclusions=src/SForce/Wsdl/**" \
+      "-Dsonar.coverage.exclusions=src/SForce/Wsdl/**" \
     || true

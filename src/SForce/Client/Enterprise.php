@@ -47,7 +47,7 @@ class Enterprise extends Base
     public function createConnection($wsdl = null, $proxy = null, array $soapOptions = [])
     {
         if ($wsdl === null) {
-            $wsdl = __DIR__ . '/../wsdl/enterprise.wsdl.xml';
+            $wsdl = __DIR__ . '/../Wsdl/enterprise.wsdl.xml';
         }
 
         return parent::createConnection($wsdl, $proxy, $soapOptions);

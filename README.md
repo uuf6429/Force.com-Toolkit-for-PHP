@@ -53,7 +53,8 @@ The WSDL can be customized for your desired version and source. You can either p
 
 **Note:** This library relies on one specific WSDL source, so for example, you cannot connect to two (or more) API endpoints with different WSDL sources. In this case, pick a common API level and use it for all.
 
-To use your own WSDL source, you have to add an "extras" entry to your `composer.json`. Here are a few examples:
+To use your own WSDL source, first you have to add an "extras" entry to your `composer.json` and then you need to pass the correct WSDL path to `$client->createConnection($wsdl)`.
+Here are a few `composer.json` examples:
 
 - A class with a static method that returns a list of sources (as strings)
     ```json
