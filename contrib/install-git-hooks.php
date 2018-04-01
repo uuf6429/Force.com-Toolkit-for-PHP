@@ -39,3 +39,6 @@ SH
 );
 
 chmod($file, 0755);
+
+// ensure wsdl classes are generated
+passthru('php ' . escapeshellarg(__DIR__ . '/generate-wsdl-classes.php'));

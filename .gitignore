@@ -1,3 +1,4 @@
 vendor/
 composer.lock
 phpunit.xml
+src/SForce/Wsdl/*.php

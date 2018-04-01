@@ -49,6 +49,9 @@ try {
         throw new WarningException("It is not allowed to commit directly into $currentBranch branch!");
     }
 
+    // ensure wsdl classes are generated
+    passthru('php ' . escapeshellarg(__DIR__ . '/generate-wsdl-classes.php'));
+
     // php-cs-fixer might not be available (eg, we're on an old branch or something)
     if (!file_exists($phpCsFixerBin)) {
         throw new FailureException('PHP-CS-Fixer is not installed!');

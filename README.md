@@ -17,6 +17,7 @@ This newer version of the library is a major rewrite.
 Migration should not be dificult since the public interface stayed the same or changed slightly (eg; some global constants are now class constants).
 
 Here's an overview of what changed:
+
 - **More Composer:** Requirements such as PHP extensions and 3rd-party PHP packages are now served through composer.
   This means once you install your extension with Composer, you won't have any further dependencies issues.
 - **Namespacing:** Everything is now under `SForce` namespace. In particular this solves issues were very generic class names caused conflicts.
@@ -26,6 +27,7 @@ Here's an overview of what changed:
 - **Bug Fixes:** Huge amount of bugs have been fixed: whitespace in output from some files, missing variables, redundant arguments, incorrect method calls etc...
 - [**Schema Generator:**](#schema-generator) A tool for generating a rough DDL schema which you can use in your IDE to help writing SOQL queries.
 - **Badges:** Now you can quickly get an overview of the project just by looking at the summary.
+- [**Custom API Version:**](#wsdl-sources) You can use your own WSDL sources, which means you can use a different API version, potentially with access to more API entities.
 
 These changes come at a cost. The minimum supported PHP version is PHP 5.6. It _might_ work with older versions, but no guarantees.
 You should upgraded immediately if you are still using an [unsupported PHP version](http://php.net/supported-versions.php).
@@ -40,7 +42,75 @@ composer require uuf6429/Force.com-Toolkit-for-PHP
 
 Alternatively, the library can be loaded by any [PSR-4](https://www.php-fig.org/psr/psr-4/) autoloader.
 
+**Important:** This library generates classes from WSDL inside `src/SForce/Wsdl` by default.
+Please see [WSDL Class Path](#wsdl-class-path) section to change this behaviour.
+
 ## Features
+
+### WSDL Sources
+
+The WSDL can be customized for your desired version and source. You can either provide your own WSDL file(s) or having your own code providing these.
+
+**Note:** This library relies on one specific WSDL source, so for example, you cannot connect to two (or more) API endpoints with different WSDL sources. In this case, pick a common API level and use it for all.
+
+To use your own WSDL source, you have to add an "extras" entry to your `composer.json`. Here are a few examples:
+
+- A class with a static method that returns a list of sources (as strings)
+    ```json
+    {
+        "extra": {
+            "sforce-wsdl-source": "MyWsdlSource::getSource"
+        }
+    }
+    ```
+- A function that returns a list of sources (as strings)
+    ```json
+    {
+        "extra": {
+            "sforce-wsdl-source": "myproject_get_wsdl_source"
+        }
+    }
+    ```
+- A list of URLs (must be accessible by composer)
+    ```json
+    {
+        "extra": {
+            "sforce-wsdl-source": [
+                "https://my-sforce.com/soap/enterprise.wsdl",
+                "https://my-sforce.com/soap/partner.wsdl",
+                "https://my-sforce.com/soap/metadata.wsdl"
+            ]
+        }
+    }
+    ```
+- A list of local files (relative to project root)
+    ```json
+    {
+        "extra": {
+            "sforce-wsdl-source": [
+                "src/SForce/Wsdl/enterprise.wsdl",
+                "src/SForce/Wsdl/partner.wsdl",
+                "src/SForce/Wsdl/metadata.wsdl"
+            ]
+        }
+    }
+    ```
+
+### WSDL Class Path
+
+As mentioned in the previous section, some classes are generated from the SOAP WSDL, even if the default settings are used.
+By default, these classes will end up in `src/SForce/Wsdl` of your project, however this can be changed via `composer.json`:
+
+```json
+{
+    "extra": {
+        "sforce-wsdl-classpath": "cache/SForce"
+    }
+}
+```
+
+- **Note 1:** The autoloader is automatically updated to point to the class path. You don't need to change it yourself. In other words: class are loaded automatically.
+- **Note 2:** Every time you change the location, make sure to delete the generated files from the previous location. The generator cannot clean up for you since it won't know about the previous location.
 
 ### Schema Generator
 
@@ -67,7 +137,8 @@ SALESFORCE_TOKEN="b0dca2fa0b3ef1a5bf5ba9dd6bdf0fca"
 vendor/bin/phpunit test/Integration
 ```
 
-# TODO
+## TODO
+
 - [ ] Convert documentation to markdown
   - [ ] Point "getting started" link in readme to docs
 - [x] Use proper namespacing

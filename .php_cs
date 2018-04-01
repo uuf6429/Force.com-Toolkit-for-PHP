@@ -36,6 +36,9 @@ TEXT
     ->setFinder(
         PhpCsFixer\Finder::create()
             ->in(__DIR__)
-            ->exclude(['vendor'])
+            ->exclude([
+                'vendor',           // we do not care about vendor style
+                'src/SForce/Wsdl',  // we do not care about local files
+            ])
     )
     ->setUsingCache(false);
