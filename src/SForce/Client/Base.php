@@ -28,22 +28,10 @@
 
 namespace SForce\Client;
 
+use SForce\Wsdl;
 use SForce\Exception\NotConnectedException;
 use SForce\QueryResult;
 use SForce\SearchResult;
-use SForce\Soap\Header\CallOptions;
-use SForce\Soap\Header\AllowFieldTruncation;
-use SForce\Soap\Header\AssignmentRule;
-use SForce\Soap\Header\Email;
-use SForce\Soap\Header\LocaleOptions;
-use SForce\Soap\Header\LoginScope;
-use SForce\Soap\Header\Mru;
-use SForce\Soap\Header\PackageVersions;
-use SForce\Soap\Header\QueryOptions;
-use SForce\Soap\Header\Session;
-use SForce\Soap\Header\UserTerritoryDelete;
-use SForce\Soap\Response\LoginResult;
-use SForce\Soap\Response\LogoutResult;
 use SForce\SObject;
 
 abstract class Base
@@ -164,7 +152,7 @@ abstract class Base
      * @param string $username Username
      * @param string $password Password
      *
-     * @return LoginResult
+     * @return Wsdl\LoginResult
      *
      * @throws NotConnectedException
      */
@@ -181,53 +169,64 @@ abstract class Base
         if ($this->loginScopeHeader !== null) {
             $this->sforce->__setSoapHeaders([$this->loginScopeHeader]);
         }
-        $result = $this->sforce->login([
+        $response = $this->sforce->login([
             'username' => $username,
             'password' => $password,
         ]);
-        $result = new LoginResult((array)$result->result);
+        
+        $result = new Wsdl\LoginResult(null, null);
+        $this->fromSoapResponse($result, $response->result);
+        
         $this->_setLoginHeader($result);
 
         return $result;
     }
 
     /**
-     * log outs from the salseforce system`
+     * Logs out from the Salesforce.com system
      *
-     * @return LogoutResult
+     * @return Wsdl\logoutResponse
      */
     public function logout()
     {
         $this->setHeaders('logout');
 
-        $result = $this->sforce->logout();
+        $response = $this->sforce->logout();
 
-        return new LogoutResult((array)$result->result);
+        $result = new Wsdl\logoutResponse();
+        $this->fromSoapResponse($result, $response->result);
+
+        return $result;
     }
 
     /**
-     *invalidate Sessions from the salseforce system`
+     * Invalidates sessions from the Salseforce.com system
      *
-     * @return invalidateSessionsResult
+     * @return Wsdl\invalidateSessionsResult
      */
     public function invalidateSessions()
     {
         $this->setHeaders('invalidateSessions');
         $this->logout();
 
-        return $this->sforce->invalidateSessions();
+        $response = $this->sforce->invalidateSessions();
+
+        $result = new Wsdl\InvalidateSessionsResult(null);
+        $this->fromSoapResponse($result, $response->result);
+
+        return $result;
     }
 
     /**
      * Specifies the session ID returned from the login server after a successful login.
      *
-     * @param LoginResult $loginResult
+     * @param Wsdl\LoginResult $loginResult
      */
-    protected function _setLoginHeader(LoginResult $loginResult)
+    protected function _setLoginHeader(Wsdl\LoginResult $loginResult)
     {
-        $this->sessionId = $loginResult->sessionId;
-        $this->setSessionHeader(new Session($this->sessionId));
-        $serverURL = $loginResult->serverUrl;
+        $this->sessionId = $loginResult->getSessionId();
+        $this->setSessionHeader(new Wsdl\SessionHeader($this->sessionId));
+        $serverURL = $loginResult->getServerUrl();
         $this->setEndpoint($serverURL);
     }
 
@@ -378,137 +377,92 @@ abstract class Base
     }
 
     /**
-     * @param CallOptions $header
+     * @param Wsdl\CallOptions $header
      */
-    public function setCallOptions(CallOptions $header)
+    public function setCallOptions(Wsdl\CallOptions $header)
     {
-        if ($header !== null) {
-            $this->callOptions = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->callOptions = null;
-        }
+        $this->callOptions = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param AssignmentRule $header
+     * @param Wsdl\AssignmentRuleHeader $header
      */
-    public function setAssignmentRuleHeader(AssignmentRule $header)
+    public function setAssignmentRuleHeader(Wsdl\AssignmentRuleHeader $header)
     {
-        if ($header !== null) {
-            $this->assignmentRuleHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->assignmentRuleHeader = null;
-        }
+        $this->assignmentRuleHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param Email $header
+     * @param Wsdl\EmailHeader $header
      */
-    public function setEmailHeader(Email $header)
+    public function setEmailHeader(Wsdl\EmailHeader $header)
     {
-        if ($header !== null) {
-            $this->emailHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->emailHeader = null;
-        }
+        $this->emailHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param LoginScope $header
+     * @param Wsdl\LoginScopeHeader $header
      */
-    public function setLoginScopeHeader(LoginScope $header)
+    public function setLoginScopeHeader(Wsdl\LoginScopeHeader $header)
     {
-        if ($header !== null) {
-            $this->loginScopeHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->loginScopeHeader = null;
-        }
+        $this->loginScopeHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param Mru $header
+     * @param Wsdl\MruHeader $header
      */
-    public function setMruHeader(Mru $header)
+    public function setMruHeader(Wsdl\MruHeader $header)
     {
-        if ($header !== null) {
-            $this->mruHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->mruHeader = null;
-        }
+        $this->mruHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param Session $header
+     * @param Wsdl\SessionHeader $header
      */
-    public function setSessionHeader(Session $header)
+    public function setSessionHeader(Wsdl\SessionHeader $header)
     {
-        if ($header->sessionId !== null) {
-            $this->sessionHeader = $header->asSoapHeader($this->namespace);
-            $this->sessionId = $header->sessionId;
-        } else {
-            $this->sessionHeader = null;
-            $this->sessionId = null;
-        }
+        $this->sessionHeader = $this->toSoapHeader($header, $this->namespace);
+        $this->sessionId = $header ? $header->getSessionId() : null;
     }
 
     /**
-     * @param UserTerritoryDelete $header
+     * @param Wsdl\UserTerritoryDeleteHeader $header
      */
-    public function setUserTerritoryDeleteHeader(UserTerritoryDelete $header)
+    public function setUserTerritoryDeleteHeader(Wsdl\UserTerritoryDeleteHeader $header)
     {
-        if ($header !== null) {
-            $this->userTerritoryDeleteHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->userTerritoryDeleteHeader = null;
-        }
+        $this->userTerritoryDeleteHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param QueryOptions $header
+     * @param Wsdl\QueryOptions $header
      */
-    public function setQueryOptions(QueryOptions $header)
+    public function setQueryOptions(Wsdl\QueryOptions $header)
     {
-        if ($header !== null) {
-            $this->queryHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->queryHeader = null;
-        }
+        $this->queryHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param AllowFieldTruncation $header
+     * @param Wsdl\AllowFieldTruncationHeader $header
      */
-    public function setAllowFieldTruncationHeader(AllowFieldTruncation $header)
+    public function setAllowFieldTruncationHeader(Wsdl\AllowFieldTruncationHeader $header)
     {
-        if ($header !== null) {
-            $this->allowFieldTruncationHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->allowFieldTruncationHeader = null;
-        }
+        $this->allowFieldTruncationHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param LocaleOptions $header
+     * @param Wsdl\LocaleOptions $header
      */
-    public function setLocaleOptions(LocaleOptions $header)
+    public function setLocaleOptions(Wsdl\LocaleOptions $header)
     {
-        if ($header !== null) {
-            $this->localeOptions = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->localeOptions = null;
-        }
+        $this->localeOptions = $this->toSoapHeader($header, $this->namespace);
     }
 
     /**
-     * @param PackageVersions $header
+     * @param Wsdl\PackageVersionHeader $header
      */
-    public function setPackageVersionHeader(PackageVersions $header)
+    public function setPackageVersionHeader(Wsdl\PackageVersionHeader $header)
     {
-        if ($header !== null) {
-            $this->packageVersionHeader = $header->asSoapHeader($this->namespace);
-        } else {
-            $this->packageVersionHeader = null;
-        }
+        $this->packageVersionHeader = $this->toSoapHeader($header, $this->namespace);
     }
 
     public function getSessionId()
@@ -554,6 +508,54 @@ abstract class Base
     public function getLastResponseHeaders()
     {
         return $this->sforce->__getLastResponseHeaders();
+    }
+
+    /**
+     * @param null|object $object
+     * @param string $namespace
+     *
+     * @return null|\SoapHeader
+     */
+    protected function toSoapHeader($object, $namespace)
+    {
+        if ($object === null) {
+            return null;
+        }
+
+        return new \SoapHeader(
+            $namespace,
+            preg_replace('/.*\\\\/', '', get_class($object)),
+            \Closure::bind(
+                function () {
+                    return get_object_vars($this);
+                },
+                $object,
+                $object
+            )->__invoke()
+        );
+    }
+
+    /**
+     * @param null|object $object
+     * @param null|object $soapResponse
+     */
+    protected function fromSoapResponse($object, $soapResponse)
+    {
+        if (!$object || !$soapResponse) {
+            return;
+        }
+
+        \Closure::bind(
+            function () use ($soapResponse) {
+                foreach (get_object_vars($soapResponse) as $key => $val) {
+                    // TODO what about object properties?
+
+                    $this->$key = $val;
+                }
+            },
+            $object,
+            $object
+        )->__invoke();
     }
 
     /**

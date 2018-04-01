@@ -30,7 +30,7 @@ Here's an overview of what changed:
 - [**Custom API Version:**](#wsdl-sources) You can use your own WSDL sources, which means you can use a different API version, potentially with access to more API entities.
 
 These changes come at a cost. The minimum supported PHP version is PHP 5.6. It _might_ work with older versions, but no guarantees.
-You should upgraded immediately if you are still using an [unsupported PHP version](http://php.net/supported-versions.php).
+You should upgrade immediately if you are still using an [unsupported PHP version](http://php.net/supported-versions.php).
 
 ## Installation
 

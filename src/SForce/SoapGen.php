@@ -85,7 +85,6 @@ class SoapGen
 
     /**
      * @param bool $ignoreCache
-     * @todo CD to project root to make relative paths work (and then CD back)
      */
     public function generate($ignoreCache = false)
     {
