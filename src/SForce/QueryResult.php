@@ -35,12 +35,12 @@ class QueryResult implements \Iterator
     private $queryLocator;
     private $done;
     private $records;
-    private $pointer; // Current iterator location
+    private $pointer;
 
     /**
      * @var Client\Base
      */
-    private $sfClient; // SOAP Client
+    private $sfClient;
 
     /**
      * @param $response
@@ -92,14 +92,13 @@ class QueryResult implements \Iterator
     public function valid()
     {
         while ($this->pointer >= count($this->records)) {
-            // Pointer is larger than (current) result set; see if we can fetch more
             if ($this->done === false) {
                 $response = $this->sfClient->queryMore($this->queryLocator);
-                $this->records = array_merge($this->records, $response->records); // Append more results
+                $this->records = array_merge($this->records, $response->records);
                 $this->done = $response->done;
                 $this->queryLocator = $response->queryLocator;
             } else {
-                return false; // No more records to fetch
+                return false;
             }
         }
         if (isset($this->records[$this->pointer])) {

@@ -28,7 +28,10 @@
 
 namespace SForce;
 
-class MetadataClient
+/**
+ * @todo Figure out usage of this class and clean up the various issues.
+ */
+class Metadata
 {
     /**
      * @var \SoapClient
@@ -37,13 +40,11 @@ class MetadataClient
 
     /**
      * @var
-     * @todo
      */
     protected $sessionId;
 
     /**
      * @var
-     * @todo
      */
     protected $location;
 
