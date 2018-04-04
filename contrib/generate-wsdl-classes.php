@@ -31,7 +31,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $oldDir = getcwd();
 try {
     chdir(__DIR__ . '/../');
-    (new \SForce\SoapGen(null, null, null))->generate();
+    (new \SForce\SoapGen(null, null, null))->generate(true);
 } finally {
     chdir($oldDir);
 }

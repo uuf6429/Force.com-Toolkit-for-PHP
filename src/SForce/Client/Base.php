@@ -29,6 +29,7 @@
 namespace SForce\Client;
 
 use JMS\Serializer\Annotation\PhpDocReader;
+use JMS\Serializer\SForceTypeResolver;
 use SForce\Wsdl;
 use SForce\Exception\NotConnectedException;
 use SForce\QueryResult;
@@ -107,53 +108,7 @@ abstract class Base
                     new IdenticalPropertyNamingStrategy()
                 )
             )
-            ->setAnnotationReader(new PhpDocReader(function ($type) {
-                static $typeCache = [];
-                if (isset($typeCache[$type])) {
-                    return $typeCache[$type];
-                }
-
-                static $typeAliasMap = [
-                    'ID' => 'string',
-                    'boolean' => 'bool',
-                    'double' => 'float',
-                    'void' => 'null',
-                    'base64Binary' => 'string',
-                    'soapType' => 'string',
-                    'fieldType' => 'string',
-                ];
-                static $simpleTypes = ['null', 'bool', 'int', 'float', 'string'];
-
-                $returnTpl = '%s';
-                $origType = $type;
-
-                // If it's an array remove brackets and change return template
-                if (substr($type, -2) === '[]') {
-                    $type = substr($type, 0, -2);
-                    $returnTpl = 'array<%s>';
-                }
-
-                // Aliases of known simple types
-                if (isset($typeAliasMap[$type])) {
-                    return $typeCache[$origType] = sprintf($returnTpl, $typeAliasMap[$type]);
-                }
-
-                // Known simple types
-                if (in_array($type, $simpleTypes, true)) {
-                    return $typeCache[$origType] = sprintf($returnTpl, $type);
-                }
-
-                // Classes in SForce namespace
-                if ($type[0] !== '\\' && class_exists("SForce\\Wsdl\\$type")) {
-                    return $typeCache[$origType] = sprintf($returnTpl, "SForce\\Wsdl\\$type");
-                }
-
-                if (class_exists($type)) {
-                    return $typeCache[$origType] = sprintf($returnTpl, ltrim($type, '\\'));
-                }
-
-                throw new \RuntimeException("Type '$type' is not supported or known.");
-            }))
+            ->setAnnotationReader(new PhpDocReader(new SForceTypeResolver()))
             ->build();
     }
 

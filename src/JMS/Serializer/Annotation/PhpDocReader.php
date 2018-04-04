@@ -33,14 +33,14 @@ use Doctrine\Common\Annotations\Reader;
 class PhpDocReader implements Reader
 {
     /**
-     * @var callable
+     * @var TypeResolver
      */
     private $typeResolver;
 
     /**
-     * @param callable $typeResolver
+     * @param TypeResolver $typeResolver
      */
-    public function __construct(callable $typeResolver)
+    public function __construct(TypeResolver $typeResolver)
     {
         $this->typeResolver = $typeResolver;
     }
@@ -58,6 +58,14 @@ class PhpDocReader implements Reader
      */
     public function getClassAnnotation(\ReflectionClass $class, $annotationName)
     {
+        $annotations = $this->getClassAnnotations($class);
+
+        foreach ($annotations as $annotation) {
+            if ($annotation instanceof $annotationName) {
+                return $annotation;
+            }
+        }
+
         return null;
     }
 
@@ -74,6 +82,14 @@ class PhpDocReader implements Reader
      */
     public function getMethodAnnotation(\ReflectionMethod $method, $annotationName)
     {
+        $annotations = $this->getMethodAnnotations($method);
+
+        foreach ($annotations as $annotation) {
+            if ($annotation instanceof $annotationName) {
+                return $annotation;
+            }
+        }
+
         return null;
     }
 
@@ -82,9 +98,28 @@ class PhpDocReader implements Reader
      */
     public function getPropertyAnnotations(\ReflectionProperty $property)
     {
-        $typeAnnotation = $this->getPropertyAnnotation($property, 'type');
+        $result = [];
 
-        return $typeAnnotation ? [$typeAnnotation] : [];
+        // add property type
+        if (($type = $this->parsePropertyType($property->getDocComment())) !== '') {
+            $attr = new Type();
+            $attr->name = $type;
+            $result[] = $attr;
+        }
+
+        // add property getter/setter
+        $method = ucfirst($property->getName());
+        $declaringClass = $property->getDeclaringClass();
+        $accessor = new Accessor();
+        if ($declaringClass->hasMethod("get$method")) {
+            $accessor->getter = "get$method";
+        }
+        if ($declaringClass->hasMethod("set$method")) {
+            $accessor->setter = "set$method";
+        }
+        $result[] = $accessor;
+
+        return $result;
     }
 
     /**
@@ -92,24 +127,21 @@ class PhpDocReader implements Reader
      */
     public function getPropertyAnnotation(\ReflectionProperty $property, $annotationName)
     {
-        $type = $this->parsePropertyType($property->getDocComment());
+        $annotations = $this->getPropertyAnnotations($property);
 
-        if ($type === '') {
-            return null;
+        foreach ($annotations as $annotation) {
+            if ($annotation instanceof $annotationName) {
+                return $annotation;
+            }
         }
 
-        $attr = new Type();
-        $attr->name = $type;
-
-        return $attr;
+        return null;
     }
 
     /**
      * @param string $docBlock
      *
      * @return string
-     *
-     * @todo What about resolving to FQN?
      */
     protected function parsePropertyType($docBlock)
     {
@@ -119,7 +151,7 @@ class PhpDocReader implements Reader
             return implode(
                 '|',
                 array_unique(
-                    array_map($this->typeResolver, $match)
+                    array_map([$this->typeResolver, 'resolve'], $match)
                 )
             );
         }
