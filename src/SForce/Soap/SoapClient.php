@@ -31,6 +31,7 @@ namespace SForce\Soap;
 class SoapClient extends \SoapClient
 {
     /** @noinspection MagicMethodsValidityInspection */
+    /** @inheritdoc */
     public function __doRequest($request, $location, $action, $version, $one_way = 0)
     {
         $response = parent::__doRequest($request, $location, $action, $version, $one_way);

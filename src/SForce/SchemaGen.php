@@ -73,8 +73,8 @@ class SchemaGen
 
         $fh = fopen($this->output, 'wb');
         try {
-            foreach ($globalDesc->sobjects as $globalEntityDesc) {
-                $entity = $this->sfClient->describeSObject($globalEntityDesc->name);
+            foreach ($globalDesc->getSobjects() as $globalEntityDesc) {
+                $entity = $this->sfClient->describeSObject($globalEntityDesc->getName());
                 fwrite($fh, PHP_EOL . $this->generateTableDDL($entity) . PHP_EOL);
             }
         } finally {
@@ -83,23 +83,27 @@ class SchemaGen
     }
 
     /**
-     * @param \stdClass $entity
+     * @param Wsdl\DescribeSObjectResult $entity
      *
      * @return string
      */
-    protected function generateTableDDL($entity)
+    protected function generateTableDDL(Wsdl\DescribeSObjectResult $entity)
     {
         static $prefix = ',' . PHP_EOL . '    ';
 
         return sprintf(
-            'CREATE TABLE %s (%s    %s%s);',
-            $entity->name,
+            /** @lang text */
+            'CREATE TABLE `%s` (%s    %s%s);',
+            $entity->getName(),
             PHP_EOL,
             implode(
                 $prefix,
-                array_map(
-                    [$this, 'generateFieldDDL'],
-                    $entity->fields
+                array_merge(
+                    array_map(
+                        [$this, 'generateFieldDDL'],
+                        $entity->getFields()
+                    ),
+                    $this->generateForeignKeys($entity->getFields())
                 )
             ),
             PHP_EOL
@@ -107,80 +111,102 @@ class SchemaGen
     }
 
     /**
-     * @param \stdClass $field
+     * @param Wsdl\Field $field
      *
      * @return string
      *
      * @throws UnsupportedFieldTypeException
      */
-    protected function generateFieldDDL($field)
+    protected function generateFieldDDL(Wsdl\Field $field)
     {
-        $allowNull = $field->nillable ? 'NULL' : 'NOT NULL';
-        $varchar = 'VARCHAR(' . ($field->length ?: 'MAX') . ')';
-        $decimal = "DECIMAL({$field->precision}, {$field->scale})";
-        $integer = "INT({$field->digits})";
+        $name = "`{$field->getName()}`";
+        $allowNull = $field->getNillable() ? 'NULL' : 'NOT NULL';
+        $varchar = 'VARCHAR(' . ($field->getLength() ?: 'MAX') . ')';
 
-        switch ($field->type) {
-            case 'id':
-                return "$field->name $varchar PRIMARY KEY";
+        switch ($field->getType()) {
+            case 'id':          // SF IDs are alphanumeric
+                return "{$name} {$varchar} PRIMARY KEY";
             case 'boolean':
-                return "$field->name BIT $allowNull";
+                return "{$name} BIT {$allowNull}";
             case 'url':
             case 'phone':
             case 'email':
             case 'string':
             case 'textarea':
-            case 'combobox': // mix between picklist and open text
-                return "$field->name $varchar $allowNull";
+            case 'combobox':    // mix between picklist and open text
+            case 'reference':   // SF IDs are alphanumeric; foreign keys generated separately
+                return "{$name} {$varchar} {$allowNull}";
             case 'picklist':
-                if (!isset($field->picklistValues) || !$field->picklistValues) {
-                    return "$field->name ENUM(" . static::$EMPTY_ENUM . ") $allowNull";
+                if (!$field->getPicklistValues()) {
+                    return "{$name} ENUM(" . static::$EMPTY_ENUM . ") {$allowNull}";
                 }
 
-                return "$field->name ENUM('"
+                return "{$name} ENUM('"
                        . implode(
                            "', '",
                            array_map(
-                               function ($pickListValue) {
-                                   return $pickListValue->value;
+                               function (Wsdl\PicklistEntry $pickListValue) {
+                                   return $pickListValue->getValue();
                                },
-                               $field->picklistValues
+                               $field->getPicklistValues()
                            )
                        ) . "') $allowNull";
             case 'multipicklist':
-                if (!isset($field->picklistValues) || !$field->picklistValues) {
-                    return "$field->name SET(" . static::$EMPTY_SET . ") $allowNull";
+                if (!$field->getPicklistValues()) {
+                    return "{$name} SET(" . static::$EMPTY_SET . ") {$allowNull}";
                 }
 
-                return "$field->name SET('"
+                return "{$name} SET('"
                        . implode(
                            "', '",
                            array_map(
-                               function ($pickListValue) {
-                                   return $pickListValue->value;
+                               function (Wsdl\PicklistEntry $pickListValue) {
+                                   return $pickListValue->getValue();
                                },
-                               $field->picklistValues
+                               $field->getPicklistValues()
                            )
-                       ) . "') $allowNull";
+                       ) . "') {$allowNull}";
             case 'int':
-                return "$field->name $integer $allowNull";
+                return "{$name} INT({$field->getDigits()}) {$allowNull}";
             case 'double':
             case 'percent':
             case 'currency':
-                return "$field->name $decimal $allowNull";
+                return "{$name} DECIMAL({$field->getPrecision()}, {$field->getScale()}) {$allowNull}";
             case 'date':
             case 'time':
             case 'datetime':
-                return "$field->name " . strtoupper($field->type) . " $allowNull";
-            case 'reference':
-                return "$field->name $varchar $allowNull"; // TODO foreign key to referenceTo[0]..
+                return "{$name} " . strtoupper($field->getType()) . " {$allowNull}";
             case 'base64':
-                return "$field->name TEXT $allowNull";
             case 'anyType':
-                return "$field->name TEXT $allowNull";
+                return "{$name} TEXT {$allowNull}";
 
             default:
-                throw new UnsupportedFieldTypeException($field->type);
+                throw new UnsupportedFieldTypeException($field->getType());
         }
+    }
+
+    /**
+     * @param Wsdl\Field[] $fields
+     *
+     * @return string[]
+     */
+    protected function generateForeignKeys(array $fields)
+    {
+        return array_map(
+            function (Wsdl\Field $field) {
+                return sprintf(
+                    'FOREIGN KEY (`%s`) REFERENCES `%s`(Id)',
+                    $field->getName(),
+                    $field->getReferenceTo()[0]
+                );
+            },
+            array_filter(
+                $fields,
+                function (Wsdl\Field $field) {
+                    return $field->getType() === Wsdl\fieldType::reference
+                        && count($field->getReferenceTo()) === 1;    // ignore polymorphic associations
+                }
+            )
+        );
     }
 }

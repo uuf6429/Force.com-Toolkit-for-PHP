@@ -37,6 +37,8 @@ class Partner extends Base
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->namespace = self::PARTNER_NAMESPACE;
     }
 
@@ -55,7 +57,7 @@ class Partner extends Base
     /**
      * @inheritdoc
      */
-    protected function getSoapClient($wsdl, $options)
+    protected function createSoapClient($wsdl, $options)
     {
         // Workaround an issue in parsing OldValue and NewValue in histories
         return new SoapClient($wsdl, $options);
@@ -73,7 +75,7 @@ class Partner extends Base
     {
         $arg = new \stdClass;
         foreach ($sObjects as $sObject) {
-            if (isset($sObject->fields)) {
+            if (property_exists('fields', $sObject)) {
                 $sObject->any = $this->_convertToAny($sObject->fields);
             }
         }
@@ -86,7 +88,6 @@ class Partner extends Base
      * Merge records
      *
      * @param \stdclass $mergeRequest
-     * @param String $type
      *
      * @return mixed
      */
@@ -138,7 +139,7 @@ class Partner extends Base
     /**
      * Updates one or more new individual objects to your organization's data.
      *
-     * @param array sObjects    Array of sObjects
+     * @param array $sObjects    Array of sObjects
      *
      * @return UpdateResult
      */
@@ -186,7 +187,7 @@ class Partner extends Base
      * @param string $sObjectType
      * @param array $ids
      *
-     * @return string
+     * @return SObject[]
      */
     public function retrieve($fieldList, $sObjectType, $ids)
     {
@@ -197,7 +198,7 @@ class Partner extends Base
      *
      * @param mixed $response
      *
-     * @return array
+     * @return SObject[]
      */
     private function _retrieveResult($response)
     {

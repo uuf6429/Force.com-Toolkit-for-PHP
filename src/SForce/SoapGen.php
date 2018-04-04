@@ -106,6 +106,7 @@ class SoapGen
                     'inputFile' => $wsdlSource,
                     'outputDir' => $this->wsdlClassPath,
                     'namespaceName' => $this->namespace,
+                    'constructorParamsDefaultToNull' => true,
                 ])
             );
         }

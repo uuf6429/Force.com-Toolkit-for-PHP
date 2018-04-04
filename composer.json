@@ -5,7 +5,9 @@
     "type": "composer-plugin",
     "autoload": {
         "psr-4": {
-            "SForce\\": "src/SForce"
+            "SForce\\": "src/SForce",
+            "Composer\\": "src/Composer",
+            "JMS\\": "src/JMS"
         }
     },
     "autoload-dev": {
@@ -19,7 +21,8 @@
         "ext-soap": "*",
         "ext-dom": "*",
         "composer-plugin-api": "^1",
-        "wsdl2phpgenerator/wsdl2phpgenerator": "^3.4"
+        "wsdl2phpgenerator/wsdl2phpgenerator": "^3.4",
+        "jms/serializer": "^1.11"
     },
     "require-dev": {
         "phpunit/phpunit": "^7 || ^5",
@@ -27,7 +30,7 @@
         "composer/composer": "^1.3"
     },
     "extra": {
-        "class": "SForce\\Composer\\Plugin"
+        "class": "Composer\\SForcePlugin"
     },
     "scripts": {
         "post-update-cmd": "php contrib/install-git-hooks.php",

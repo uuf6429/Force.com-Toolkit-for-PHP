@@ -44,7 +44,7 @@ class SObject
             return;
         }
 
-        foreach ($response as $responseKey => $responseValue) {
+        foreach ((array)$response as $responseKey => $responseValue) {
             if (in_array((string)$responseKey, ['Id', 'type', 'any'], true)) {
                 continue;
             }
@@ -161,9 +161,6 @@ class SObject
             $xml->$k = $v;
         }
 
-        //$new_string = '<Object xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'.$new_string.'</Object>';
-        //$new_string = $new_string;
-        //$xml = simplexml_load_string($new_string);
         return $xml;
     }
 
@@ -196,9 +193,6 @@ class SObject
 
         //Initializations
         $xml_array = [];
-        $parents = [];
-        $opened_tags = [];
-        $arr = [];
 
         $current = &$xml_array;
 
@@ -237,7 +231,7 @@ class SObject
                         }
 
                         //Check for nil and ignore other attributes.
-                        if (isset($attributes) && isset($attributes['xsi:nil']) && !strcasecmp($attributes['xsi:nil'], 'true')) {
+                        if (isset($attributes, $attributes['xsi:nil']) && !strcasecmp($attributes['xsi:nil'], 'true')) {
                             $result = null;
                         }
                         break;
@@ -250,7 +244,7 @@ class SObject
             if ($type === 'open') {//The starting of the tag '<tag>'
                 $parent[$level - 1] = &$current;
 
-                if (!is_array($current) or (!array_key_exists($tag, $current))) { //Insert New tag
+                if (!is_array($current) || (!array_key_exists($tag, $current))) { //Insert New tag
                     $current[$tag] = $result;
                     $current = &$current[$tag];
                 } else { //There was another element with the same tag name

@@ -33,7 +33,7 @@ use SForce\Test\Integration\TestCase;
 
 class SchemaGenTest extends TestCase
 {
-    const OUT_FILE = __DIR__ . '/schema.sql';
+    const OUT_FILE = __DIR__ . '/partner.sql';
 
     protected function setUp()
     {

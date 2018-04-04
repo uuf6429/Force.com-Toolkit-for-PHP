@@ -26,16 +26,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace SForce\Composer;
+namespace Composer;
 
-use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SForce\SoapGen;
 
-class Plugin implements PluginInterface
+class SForcePlugin implements PluginInterface
 {
     const WSDL_SOURCE = 'sforce-wsdl-source';
     const WSDL_CLASSPATH = 'sforce-wsdl-classpath';

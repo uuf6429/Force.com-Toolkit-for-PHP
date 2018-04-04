@@ -38,6 +38,8 @@ class Enterprise extends Base
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->namespace = self::ENTERPRISE_NAMESPACE;
     }
 

@@ -28,11 +28,15 @@
 
 namespace SForce\Client;
 
+use JMS\Serializer\Annotation\PhpDocReader;
 use SForce\Wsdl;
 use SForce\Exception\NotConnectedException;
 use SForce\QueryResult;
 use SForce\SearchResult;
 use SForce\SObject;
+use JMS\Serializer\SerializerBuilder;
+use JMS\Serializer\Naming\IdenticalPropertyNamingStrategy;
+use JMS\Serializer\ObjectDeserializationVisitor;
 
 abstract class Base
 {
@@ -90,28 +94,79 @@ abstract class Base
     protected $localeOptions;
     protected $packageVersionHeader;
 
+    private $serializer;
+
+    public function __construct()
+    {
+        $this->serializer = SerializerBuilder::create()
+            ->addDefaultDeserializationVisitors()
+            ->setPropertyNamingStrategy(new IdenticalPropertyNamingStrategy())
+            ->setDeserializationVisitor(
+                'object',
+                new ObjectDeserializationVisitor(
+                    new IdenticalPropertyNamingStrategy()
+                )
+            )
+            ->setAnnotationReader(new PhpDocReader(function ($type) {
+                static $typeCache = [];
+                if (isset($typeCache[$type])) {
+                    return $typeCache[$type];
+                }
+
+                static $typeAliasMap = [
+                    'ID' => 'string',
+                    'boolean' => 'bool',
+                    'double' => 'float',
+                    'void' => 'null',
+                    'base64Binary' => 'string',
+                    'soapType' => 'string',
+                    'fieldType' => 'string',
+                ];
+                static $simpleTypes = ['null', 'bool', 'int', 'float', 'string'];
+
+                $returnTpl = '%s';
+                $origType = $type;
+
+                // If it's an array remove brackets and change return template
+                if (substr($type, -2) === '[]') {
+                    $type = substr($type, 0, -2);
+                    $returnTpl = 'array<%s>';
+                }
+
+                // Aliases of known simple types
+                if (isset($typeAliasMap[$type])) {
+                    return $typeCache[$origType] = sprintf($returnTpl, $typeAliasMap[$type]);
+                }
+
+                // Known simple types
+                if (in_array($type, $simpleTypes, true)) {
+                    return $typeCache[$origType] = sprintf($returnTpl, $type);
+                }
+
+                // Classes in SForce namespace
+                if ($type[0] !== '\\' && class_exists("SForce\\Wsdl\\$type")) {
+                    return $typeCache[$origType] = sprintf($returnTpl, "SForce\\Wsdl\\$type");
+                }
+
+                if (class_exists($type)) {
+                    return $typeCache[$origType] = sprintf($returnTpl, ltrim($type, '\\'));
+                }
+
+                throw new \RuntimeException("Type '$type' is not supported or known.");
+            }))
+            ->build();
+    }
+
     public function getNamespace()
     {
         return $this->namespace;
     }
-
 
     // clientId specifies which application or toolkit is accessing the
     // salesforce.com API. For applications that are certified salesforce.com
     // solutions, replace this with the value provided by salesforce.com.
     // Otherwise, leave this value as 'phpClient/1.0'.
     protected $client_id;
-
-    /**
-     * @param string $wsdl
-     * @param array $options
-     *
-     * @return \SoapClient
-     */
-    protected function getSoapClient($wsdl, $options)
-    {
-        return new \SoapClient($wsdl, $options);
-    }
 
     /**
      * Connect method to www.salesforce.com
@@ -141,7 +196,7 @@ abstract class Base
             $soapClientArray = array_merge($soapClientArray, $proxy->toArray());
         }
 
-        $this->sforce = $this->getSoapClient($wsdl, $soapClientArray);
+        $this->sforce = $this->createSoapClient($wsdl, $soapClientArray);
 
         return $this->sforce;
     }
@@ -172,11 +227,10 @@ abstract class Base
         $response = $this->sforce->login([
             'username' => $username,
             'password' => $password,
-        ]);
-        
-        $result = new Wsdl\LoginResult(null, null);
-        $this->fromSoapResponse($result, $response->result);
-        
+        ])->result;
+
+        $result = $this->fromSoapResponse(Wsdl\LoginResult::class, $response);
+
         $this->_setLoginHeader($result);
 
         return $result;
@@ -191,12 +245,9 @@ abstract class Base
     {
         $this->setHeaders('logout');
 
-        $response = $this->sforce->logout();
+        $response = $this->sforce->logout()->result;
 
-        $result = new Wsdl\logoutResponse();
-        $this->fromSoapResponse($result, $response->result);
-
-        return $result;
+        return $this->fromSoapResponse(Wsdl\logoutResponse::class, $response);
     }
 
     /**
@@ -211,10 +262,7 @@ abstract class Base
 
         $response = $this->sforce->invalidateSessions();
 
-        $result = new Wsdl\InvalidateSessionsResult(null);
-        $this->fromSoapResponse($result, $response->result);
-
-        return $result;
+        return $this->fromSoapResponse(Wsdl\InvalidateSessionsResult::class, $response);
     }
 
     /**
@@ -247,6 +295,10 @@ abstract class Base
     private function setHeaders($call = null)
     {
         $this->sforce->__setSoapHeaders(null);
+
+        if ($this->sessionHeader === null) {
+            throw new NotConnectedException('Session header has not been set.');
+        }
 
         $header_array = [
             $this->sessionHeader,
@@ -511,104 +563,6 @@ abstract class Base
     }
 
     /**
-     * @param null|object $object
-     * @param string $namespace
-     *
-     * @return null|\SoapHeader
-     */
-    protected function toSoapHeader($object, $namespace)
-    {
-        if ($object === null) {
-            return null;
-        }
-
-        return new \SoapHeader(
-            $namespace,
-            preg_replace('/.*\\\\/', '', get_class($object)),
-            \Closure::bind(
-                function () {
-                    return get_object_vars($this);
-                },
-                $object,
-                $object
-            )->__invoke()
-        );
-    }
-
-    /**
-     * @param null|object $object
-     * @param null|object $soapResponse
-     */
-    protected function fromSoapResponse($object, $soapResponse)
-    {
-        if (!$object || !$soapResponse) {
-            return;
-        }
-
-        \Closure::bind(
-            function () use ($soapResponse) {
-                foreach (get_object_vars($soapResponse) as $key => $val) {
-                    // TODO what about object properties?
-
-                    $this->$key = $val;
-                }
-            },
-            $object,
-            $object
-        )->__invoke();
-    }
-
-    /**
-     * @param array $fields
-     *
-     * @return string
-     */
-    protected function _convertToAny($fields)
-    {
-        $anyString = '';
-        foreach ($fields as $key => $value) {
-            $anyString = $anyString . '<' . $key . '>' . $value . '</' . $key . '>';
-        }
-
-        return $anyString;
-    }
-
-    protected function _create($arg)
-    {
-        $this->setHeaders(static::CALL_CREATE);
-
-        return $this->sforce->create($arg)->result;
-    }
-
-    protected function _merge($arg)
-    {
-        $this->setHeaders(static::CALL_MERGE);
-
-        return $this->sforce->merge($arg)->result;
-    }
-
-    protected function _process($arg)
-    {
-        $this->setHeaders();
-
-        return $this->sforce->process($arg)->result;
-    }
-
-    protected function _update($arg)
-    {
-        $this->setHeaders(static::CALL_UPDATE);
-
-        return $this->sforce->update($arg)->result;
-    }
-
-    protected function _upsert($arg)
-    {
-        $this->setHeaders(static::CALL_UPSERT);
-
-        return $this->sforce->upsert($arg)->result;
-    }
-
-    /**
      * @param array $request
      *
      * @return Unknown
@@ -772,13 +726,15 @@ abstract class Base
     /**
      * Retrieves a list of available objects for your organization's data.
      *
-     * @return DescribeGlobalResult
+     * @return Wsdl\DescribeGlobalResult
      */
     public function describeGlobal()
     {
         $this->setHeaders(static::CALL_DESCRIBE_GLOBAL);
 
-        return $this->sforce->describeGlobal()->result;
+        $response = $this->sforce->describeGlobal()->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeGlobalResult::class, $response);
     }
 
     /**
@@ -788,20 +744,23 @@ abstract class Base
      * display-only views and record type mappings. Note that field-level security
      * and layout editability affects which fields appear in a layout.
      *
-     * @param string Type   Object Type
+     * @param string $type Object Type
+     * @param array $recordTypeIds
      *
-     * @return DescribeLayoutResult
+     * @return Wsdl\DescribeLayoutResult
      */
-    public function describeLayout($type, array $recordTypeIds = null)
+    public function describeLayout($type, array $recordTypeIds = [])
     {
         $this->setHeaders(static::CALL_DESCRIBE_LAYOUT);
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        if (isset($recordTypeIds) && count($recordTypeIds)) {
+        if (count($recordTypeIds)) {
             $arg->recordTypeIds = $recordTypeIds;
         }
 
-        return $this->sforce->describeLayout($arg)->result;
+        $response = $this->sforce->describeLayout($arg)->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeLayoutResult::class, $response);
     }
 
     /**
@@ -810,7 +769,7 @@ abstract class Base
      *
      * @param string $type Object type
      *
-     * @return DescribsSObjectResult
+     * @return Wsdl\DescribeSObjectResult
      */
     public function describeSObject($type)
     {
@@ -818,7 +777,9 @@ abstract class Base
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        return $this->sforce->describeSObject($arg)->result;
+        $response = $this->sforce->describeSObject($arg)->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeSObjectResult::class, $response);
     }
 
     /**
@@ -827,13 +788,15 @@ abstract class Base
      *
      * @param array $arrayOfTypes Array of object types.
      *
-     * @return DescribsSObjectResult
+     * @return Wsdl\DescribeSObjectResult
      */
     public function describeSObjects($arrayOfTypes)
     {
         $this->setHeaders(static::CALL_DESCRIBE_SOBJECTS);
 
-        return $this->sforce->describeSObjects($arrayOfTypes)->result;
+        $response = $this->sforce->describeSObjects($arrayOfTypes)->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeSObjectResult::class, $response);
     }
 
     /**
@@ -841,13 +804,15 @@ abstract class Base
      * custom apps, if any, available for the user who sends the call, including
      * the list of tabs defined for each app.
      *
-     * @return DescribeTabSetResult
+     * @return Wsdl\DescribeTabSetResult
      */
     public function describeTabs()
     {
         $this->setHeaders(static::CALL_DESCRIBE_TABS);
 
-        return $this->sforce->describeTabs()->result;
+        $response = $this->sforce->describeTabs()->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeTabSetResult::class, $response);
     }
 
     /**
@@ -856,7 +821,7 @@ abstract class Base
      *
      * @param string $sObjectType sObject Type
      *
-     * @return DescribeDataCategoryGroupResult
+     * @return Wsdl\DescribeDataCategoryGroupResult
      */
     public function describeDataCategoryGroups($sObjectType)
     {
@@ -864,16 +829,18 @@ abstract class Base
         $arg = new \stdClass();
         $arg->sObjectType = new \SoapVar($sObjectType, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        return $this->sforce->describeDataCategoryGroups($arg)->result;
+        $response = $this->sforce->describeDataCategoryGroups($arg)->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeDataCategoryGroupResult::class, $response);
     }
 
     /**
      * Retrieves available category groups along with their data category structure for objects specified in the request.
      *
-     * @param DataCategoryGroupSobjectTypePair $pairs
+     * @param Wsdl\DataCategoryGroupSobjectTypePair[] $pairs
      * @param bool $topCategoriesOnly Object Type
      *
-     * @return DescribeLayoutResult
+     * @return Wsdl\DescribeLayoutResult
      */
     public function describeDataCategoryGroupStructures(array $pairs, $topCategoriesOnly)
     {
@@ -882,7 +849,9 @@ abstract class Base
         $arg->pairs = $pairs;
         $arg->topCategoriesOnly = new \SoapVar($topCategoriesOnly, XSD_BOOLEAN, 'boolean', 'http://www.w3.org/2001/XMLSchema');
 
-        return $this->sforce->describeDataCategoryGroupStructures($arg)->result;
+        $response = $this->sforce->describeDataCategoryGroupStructures($arg)->result;
+
+        return $this->fromSoapResponse(Wsdl\DescribeLayoutResult::class, $response);
     }
 
     /**
@@ -1082,4 +1051,102 @@ abstract class Base
      * @return SaveResult
      */
     abstract public function create($sObjects, $type = null);
+
+    /**
+     * @param string $wsdl
+     * @param array $options
+     *
+     * @return \SoapClient
+     */
+    protected function createSoapClient($wsdl, $options)
+    {
+        return new \SoapClient($wsdl, $options);
+    }
+
+    /**
+     * @param null|object $object
+     * @param string $namespace
+     *
+     * @return null|\SoapHeader
+     */
+    protected function toSoapHeader($object, $namespace)
+    {
+        if ($object === null) {
+            return null;
+        }
+
+        /** @noinspection ImplicitMagicMethodCallInspection */
+        return new \SoapHeader(
+            $namespace,
+            preg_replace('/.*\\\\/', '', get_class($object)),
+            \Closure::bind(
+                function () {
+                    return get_object_vars($this);
+                },
+                $object,
+                $object
+            )->__invoke()
+        );
+    }
+
+    /**
+     * @param string $class
+     * @param null|object $soapResponse
+     *
+     * @return mixed
+     */
+    protected function fromSoapResponse($class, $soapResponse)
+    {
+        return $this->serializer->deserialize($soapResponse, $class, 'object');
+    }
+
+    /**
+     * @param array $fields
+     *
+     * @return string
+     */
+    protected function _convertToAny($fields)
+    {
+        $anyString = '';
+        foreach ($fields as $key => $value) {
+            $anyString = $anyString . '<' . $key . '>' . $value . '</' . $key . '>';
+        }
+
+        return $anyString;
+    }
+
+    protected function _create($arg)
+    {
+        $this->setHeaders(static::CALL_CREATE);
+
+        return $this->sforce->create($arg)->result;
+    }
+
+    protected function _merge($arg)
+    {
+        $this->setHeaders(static::CALL_MERGE);
+
+        return $this->sforce->merge($arg)->result;
+    }
+
+    protected function _process($arg)
+    {
+        $this->setHeaders();
+
+        return $this->sforce->process($arg)->result;
+    }
+
+    protected function _update($arg)
+    {
+        $this->setHeaders(static::CALL_UPDATE);
+
+        return $this->sforce->update($arg)->result;
+    }
+
+    protected function _upsert($arg)
+    {
+        $this->setHeaders(static::CALL_UPSERT);
+
+        return $this->sforce->upsert($arg)->result;
+    }
 }
