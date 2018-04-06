@@ -82,6 +82,11 @@ class SForceTypeResolver implements TypeResolver
             $returnTpl = self::RETURN_ARRAY;
         }
 
+        // Fully-qualified classes
+        if ($type[0] === '\\') {
+            return $this->typeCache[$origType] = sprintf($returnTpl, ltrim($type, '\\'));
+        }
+
         // Aliases of known simple types
         if (isset(self::$typeAliasMap[$type])) {
             return $this->typeCache[$origType] = sprintf($returnTpl, self::$typeAliasMap[$type]);
@@ -93,10 +98,11 @@ class SForceTypeResolver implements TypeResolver
         }
 
         // Classes in SForce namespace
-        if ($type[0] !== '\\' && class_exists(self::WSDL_NS . $type)) {
+        if (class_exists(self::WSDL_NS . $type)) {
             return $this->typeCache[$origType] = sprintf($returnTpl, self::WSDL_NS . $type);
         }
 
+        // "Other" classes (this is probably wrong)
         if (class_exists($type)) {
             return $this->typeCache[$origType] = sprintf($returnTpl, ltrim($type, '\\'));
         }

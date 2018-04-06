@@ -54,138 +54,159 @@ class SForceDeserializerTest extends TestCase
             ->build();
     }
 
-    public function testDeserializerWithSubObjects()
+    /**
+     * @param object $data
+     * @param string $class
+     * @param null|object $expectedResult
+     * @param null|\Exception $expectedException
+     *
+     * @dataProvider deserializationScenarioDataProvider
+     */
+    public function testDeserializationScenario($data, $class, $expectedResult, $expectedException = null)
     {
-        $this->assertEquals(
-            (new Wsdl\LoginResult(null, null))
-                ->setMetadataServerUrl('http://metadata/')
-                ->setPasswordExpired(false)
-                ->setSandbox(true)
-                ->setServerUrl('http://server/')
-                ->setSessionId('SID12456')
-                ->setUserId('U1245632')
-                ->setUserInfo(
-                    new Wsdl\GetUserInfoResult(
-                        true,
-                        false,
-                        true,
-                        'OID23',
-                        false,
-                        'Umbrella, Inc.',
-                        'PID809432',
-                        'bc@umi.com',
-                        'B. Collins',
-                        'UID876532',
-                        'DE',
-                        'DE',
-                        'bcollins',
-                        '0100',
-                        'sys',
-                        'none'
-                    )
+        if ($expectedException) {
+            $this->expectException(get_class($expectedException));
+            $this->expectExceptionMessage($expectedException->getMessage());
+        }
+
+        $this->assertEquals($expectedResult, $this->serializer->deserialize($data, $class, 'object'));
+    }
+
+    /**
+     * @return array
+     */
+    public function deserializationScenarioDataProvider()
+    {
+        return [
+            'deserialize objects with object properties' => [
+                '$data' => (object)[
+                    'metadataServerUrl' => 'http://metadata/',
+                    'passwordExpired' => false,
+                    'sandbox' => true,
+                    'serverUrl' => 'http://server/',
+                    'sessionId' => 'SID12456',
+                    'userId' => 'U1245632',
+                    'userInfo' => (object)[
+                        'accessibilityMode' => true,
+                        'orgDisallowHtmlAttachments' => false,
+                        'orgHasPersonAccounts' => true,
+                        'organizationId' => 'OID23',
+                        'organizationMultiCurrency' => false,
+                        'organizationName' => 'Umbrella, Inc.',
+                        'profileId' => 'PID809432',
+                        'userEmail' => 'bc@umi.com',
+                        'userFullName' => 'B. Collins',
+                        'userId' => 'UID876532',
+                        'userLanguage' => 'DE',
+                        'userLocale' => 'DE',
+                        'userName' => 'bcollins',
+                        'userTimeZone' => '0100',
+                        'userType' => 'sys',
+                        'userUiSkin' => 'none',
+                    ],
+                ],
+                '$class' => Wsdl\LoginResult::class,
+                '$expectedResult' => (new Wsdl\LoginResult(null, null))
+                    ->setMetadataServerUrl('http://metadata/')
+                    ->setPasswordExpired(false)
+                    ->setSandbox(true)
+                    ->setServerUrl('http://server/')
+                    ->setSessionId('SID12456')
+                    ->setUserId('U1245632')
+                    ->setUserInfo(
+                        new Wsdl\GetUserInfoResult(
+                            true,
+                            false,
+                            true,
+                            'OID23',
+                            false,
+                            'Umbrella, Inc.',
+                            'PID809432',
+                            'bc@umi.com',
+                            'B. Collins',
+                            'UID876532',
+                            'DE',
+                            'DE',
+                            'bcollins',
+                            '0100',
+                            'sys',
+                            'none'
+                        )
+                    ),
+            ],
+
+            'test non-objects not allowed' => [
+                '$data' => 1234,
+                '$class' => \stdClass::class,
+                '$expectedResult' => null,
+                '$expectedException' => new Serializer\Exception\RuntimeException('An object graph was expected.')
+            ],
+
+            'test array of simple types and enums' => [
+                '$data' => (object)[
+                    'autoNumber' => true,
+                    'byteLength' => 4,
+                    'calculated' => false,
+                    'caseSensitive' => true,
+                    'createable' => false,
+                    'custom' => false,
+                    'defaultedOnCreate' => true,
+                    'deprecatedAndHidden' => false,
+                    'digits' => 4,
+                    'filterable' => true,
+                    'groupable' => false,
+                    'idLookup' => true,
+                    'label' => 'Some Field',
+                    'length' => 8,
+                    'name' => 'SomeField',
+                    'nameField' => false,
+                    'nillable' => true,
+                    'precision' => 4,
+                    'restrictedPicklist' => false,
+                    'scale' => 0,
+                    'soapType' => Wsdl\soapType::tnsID,
+                    'type' => Wsdl\fieldType::reference,
+                    'unique' => true,
+                    'updateable' => false,
+                ],
+                '$class' => Wsdl\Field::class,
+                '$expectedResult' => new Wsdl\Field(
+                    true,
+                    4,
+                    false,
+                    true,
+                    false,
+                    false,
+                    true,
+                    false,
+                    4,
+                    true,
+                    false,
+                    true,
+                    'Some Field',
+                    8,
+                    'SomeField',
+                    false,
+                    true,
+                    4,
+                    false,
+                    0,
+                    'tns:ID',
+                    'reference',
+                    true,
+                    false
                 ),
-            $this->serializer
-                ->deserialize(
-                    (object)[
-                        'metadataServerUrl' => 'http://metadata/',
-                        'passwordExpired' => false,
-                        'sandbox' => true,
-                        'serverUrl' => 'http://server/',
-                        'sessionId' => 'SID12456',
-                        'userId' => 'U1245632',
-                        'userInfo' => (object)[
-                            'accessibilityMode' => true,
-                            'orgDisallowHtmlAttachments' => false,
-                            'orgHasPersonAccounts' => true,
-                            'organizationId' => 'OID23',
-                            'organizationMultiCurrency' => false,
-                            'organizationName' => 'Umbrella, Inc.',
-                            'profileId' => 'PID809432',
-                            'userEmail' => 'bc@umi.com',
-                            'userFullName' => 'B. Collins',
-                            'userId' => 'UID876532',
-                            'userLanguage' => 'DE',
-                            'userLocale' => 'DE',
-                            'userName' => 'bcollins',
-                            'userTimeZone' => '0100',
-                            'userType' => 'sys',
-                            'userUiSkin' => 'none',
-                        ],
-                    ],
-                    Wsdl\LoginResult::class,
-                    'object'
-                )
-        );
-    }
+            ],
 
-    public function testOnlyObjectGraphsAreAllowed()
-    {
-        $this->expectException(Serializer\Exception\RuntimeException::class);
-        $this->expectExceptionMessage('An object graph was expected.');
-
-        $this->serializer->deserialize(1234, \stdClass::class, 'object');
-    }
-
-    public function testTypeArraysAndEnums()
-    {
-        $this->assertEquals(
-            new Wsdl\Field(
-                true,
-                4,
-                false,
-                true,
-                false,
-                false,
-                true,
-                false,
-                4,
-                true,
-                false,
-                true,
-                'Some Field',
-                8,
-                'SomeField',
-                false,
-                true,
-                4,
-                false,
-                0,
-                'tns:ID',
-                'reference',
-                true,
-                false
-            ),
-            $this->serializer
-                ->deserialize(
-                    (object)[
-                        'autoNumber' => true,
-                        'byteLength' => 4,
-                        'calculated' => false,
-                        'caseSensitive' => true,
-                        'createable' => false,
-                        'custom' => false,
-                        'defaultedOnCreate' => true,
-                        'deprecatedAndHidden' => false,
-                        'digits' => 4,
-                        'filterable' => true,
-                        'groupable' => false,
-                        'idLookup' => true,
-                        'label' => 'Some Field',
-                        'length' => 8,
-                        'name' => 'SomeField',
-                        'nameField' => false,
-                        'nillable' => true,
-                        'precision' => 4,
-                        'restrictedPicklist' => false,
-                        'scale' => 0,
-                        'soapType' => Wsdl\soapType::tnsID,
-                        'type' => Wsdl\fieldType::reference,
-                        'unique' => true,
-                        'updateable' => false,
-                    ],
-                    Wsdl\Field::class,
-                    'object'
-                )
-        );
+            'test object with basic PHP class' => [
+                '$data' => (object)[
+                    'CreatedDate' => '2018-02-20T18:50:00+01:00',
+                ],
+                '$class' => Wsdl\CaseTeamTemplate::class,
+                '$expectedResult' => (new \ReflectionClass(Wsdl\CaseTeamTemplate::class))
+                    ->newInstanceWithoutConstructor()
+                    ->setCreatedDate(new \DateTime('20-02-2018 18:50')),
+            ],
+        ];
     }
 }

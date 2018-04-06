@@ -50,6 +50,10 @@ class ObjectDeserializationVisitor extends GenericDeserializationVisitor
      */
     public function visitProperty(PropertyMetadata $metadata, $data, Context $context)
     {
-        parent::visitProperty($metadata, is_object($data) ? (array)$data : $data, $context);
+        if (is_object($data)) {
+            $data = (array)$data;
+        }
+
+        parent::visitProperty($metadata, $data, $context);
     }
 }

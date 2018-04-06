@@ -99,11 +99,13 @@ class PhpDocReader implements Reader
     public function getPropertyAnnotations(\ReflectionProperty $property)
     {
         $result = [];
+        $type = $this->parsePropertyType($property->getDocComment());
+        $isDateType = in_array($type, [\DateTime::class, \DateTimeImmutable::class], true);
 
         // add property type
-        if (($type = $this->parsePropertyType($property->getDocComment())) !== '') {
+        if ($type !== '') {
             $attr = new Type();
-            $attr->name = $type;
+            $attr->name = $isDateType ? 'string' : $type;
             $result[] = $attr;
         }
 
@@ -114,7 +116,8 @@ class PhpDocReader implements Reader
         if ($declaringClass->hasMethod("get$method")) {
             $accessor->getter = "get$method";
         }
-        if ($declaringClass->hasMethod("set$method")) {
+        // setter for date(time) types is not compatible with string, so we ignore setter
+        if (!$isDateType && $declaringClass->hasMethod("set$method")) {
             $accessor->setter = "set$method";
         }
         $result[] = $accessor;
