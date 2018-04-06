@@ -30,12 +30,12 @@ namespace SForce;
 
 use SForce\Exception\UnexpectedCodeFlowReachedException;
 
-class QueryResult implements \Iterator
+class QueryResult extends Wsdl\QueryResult implements \Iterator
 {
-    private $queryLocator;
-    private $done;
-    private $records;
-    private $pointer;
+    /**
+     * @var int
+     */
+    private $pointer = 0;
 
     /**
      * @var Client\Base
@@ -43,54 +43,58 @@ class QueryResult implements \Iterator
     private $sfClient;
 
     /**
-     * @param $response
      * @param Client\Base $sfClient
+     *
+     * @return $this
      */
-    public function __construct($response, Client\Base $sfClient)
+    public function setClient(Client\Base $sfClient)
     {
-        $this->queryLocator = $response->queryLocator;
-        $this->done = $response->done;
-        $this->pointer = 0;
         $this->sfClient = $sfClient;
 
-        if ($response instanceof self) {
-            $this->records = $response->records;
-        } else {
-            $this->records = [];
-            if (isset($response->records)) {
-                if (is_array($response->records)) {
-                    foreach ($response->records as $record) {
-                        $this->records[] = $record;
-                    }
-                } else {
-                    $this->records[] = $response->records;
-                }
-            }
-        }
+        return $this;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function rewind()
     {
         $this->pointer = 0;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function next()
     {
-        ++ $this->pointer;
+        $this->pointer ++;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function key()
     {
         return $this->pointer;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function current()
     {
-        return new SObject($this->records[$this->pointer], $this->sfClient);
+        return $this->records[$this->pointer];
     }
 
+    /**
+     * @inheritdoc
+     */
     public function valid()
     {
+        if ($this->sfClient === null) {
+            throw new \RuntimeException('SalesForce client has not been set.');
+        }
+
         while ($this->pointer >= count($this->records)) {
             if ($this->done === false) {
                 $response = $this->sfClient->queryMore($this->queryLocator);

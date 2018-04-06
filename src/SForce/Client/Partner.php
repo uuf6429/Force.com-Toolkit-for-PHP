@@ -37,8 +37,6 @@ class Partner extends Base
 
     public function __construct()
     {
-        parent::__construct();
-
         $this->namespace = self::PARTNER_NAMESPACE;
     }
 
@@ -60,7 +58,7 @@ class Partner extends Base
     protected function createSoapClient($wsdl, $options)
     {
         // Workaround an issue in parsing OldValue and NewValue in histories
-        return new SoapClient($wsdl, $options);
+        return new SoapClient($options, $wsdl);
     }
 
     /**
@@ -76,7 +74,7 @@ class Partner extends Base
         $arg = new \stdClass;
         foreach ($sObjects as $sObject) {
             if (property_exists('fields', $sObject)) {
-                $sObject->any = $this->_convertToAny($sObject->fields);
+                $sObject->setAny($this->_convertToAny($sObject->getFields()));
             }
         }
         $arg->sObjects = $sObjects;
@@ -102,38 +100,6 @@ class Partner extends Base
 
             return $this->_merge($arg);
         }
-    }
-
-    /**
-     *
-     * @inheritdoc
-     */
-    public function sendSingleEmail(array $request)
-    {
-        $messages = [];
-        foreach ($request as $r) {
-            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
-        }
-        $arg = new \stdClass();
-        $arg->messages = $messages;
-
-        return parent::_sendEmail($arg);
-    }
-
-    /**
-     *
-     * @inheritdoc
-     */
-    public function sendMassEmail(array $request)
-    {
-        $messages = [];
-        foreach ($request as $r) {
-            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
-        }
-        $arg = new \stdClass();
-        $arg->messages = $messages;
-
-        return parent::_sendEmail($arg);
     }
 
     /**
@@ -169,7 +135,6 @@ class Partner extends Base
      */
     public function upsert($ext_Id, $sObjects)
     {
-        //		$this->_setSessionHeader();
         $arg = new \stdClass;
         $arg->externalIDFieldName = new \SoapVar($ext_Id, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
         foreach ($sObjects as $sObject) {
@@ -180,37 +145,5 @@ class Partner extends Base
         $arg->sObjects = $sObjects;
 
         return parent::_upsert($arg);
-    }
-
-    /**
-     * @param string $fieldList
-     * @param string $sObjectType
-     * @param array $ids
-     *
-     * @return SObject[]
-     */
-    public function retrieve($fieldList, $sObjectType, $ids)
-    {
-        return $this->_retrieveResult(parent::retrieve($fieldList, $sObjectType, $ids));
-    }
-
-    /**
-     *
-     * @param mixed $response
-     *
-     * @return SObject[]
-     */
-    private function _retrieveResult($response)
-    {
-        $arr = [];
-        if (is_array($response)) {
-            foreach ($response as $r) {
-                $arr[] = new SObject($r, $this);
-            }
-        } else {
-            $arr[] = new SObject($response, $this);
-        }
-
-        return $arr;
     }
 }

@@ -28,16 +28,10 @@
 
 namespace SForce\Client;
 
-use JMS\Serializer\Annotation\PhpDocReader;
-use JMS\Serializer\SForceTypeResolver;
 use SForce\Wsdl;
 use SForce\Exception\NotConnectedException;
 use SForce\QueryResult;
-use SForce\SearchResult;
 use SForce\SObject;
-use JMS\Serializer\SerializerBuilder;
-use JMS\Serializer\Naming\IdenticalPropertyNamingStrategy;
-use JMS\Serializer\ObjectDeserializationVisitor;
 
 abstract class Base
 {
@@ -71,12 +65,12 @@ abstract class Base
     const CALL_UPSERT = 'upsert';
 
     /**
-     * @var \SoapClient
+     * @var Wsdl\SforceService
      */
     protected $sforce;
     protected $sessionId;
     protected $location;
-    protected $version = '27.0';
+    protected $version = '27.0'; // TODO autodetect and/or remove this
 
     protected $namespace;
 
@@ -94,23 +88,6 @@ abstract class Base
     protected $allowFieldTruncationHeader;
     protected $localeOptions;
     protected $packageVersionHeader;
-
-    private $serializer;
-
-    public function __construct()
-    {
-        $this->serializer = SerializerBuilder::create()
-            ->addDefaultDeserializationVisitors()
-            ->setPropertyNamingStrategy(new IdenticalPropertyNamingStrategy())
-            ->setDeserializationVisitor(
-                'object',
-                new ObjectDeserializationVisitor(
-                    new IdenticalPropertyNamingStrategy()
-                )
-            )
-            ->setAnnotationReader(new PhpDocReader(new SForceTypeResolver()))
-            ->build();
-    }
 
     public function getNamespace()
     {
@@ -136,22 +113,26 @@ abstract class Base
      */
     public function createConnection($wsdl, $proxy = null, array $soapOptions = [])
     {
-        $soapClientArray = array_merge(
+        $soapOptions = array_merge(
             [
                 'user_agent' => "salesforce-toolkit-php/{$this->version}",
                 'encoding' => 'utf-8',
                 'trace' => 1,
                 'features' => SOAP_SINGLE_ELEMENT_ARRAYS,
                 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP,
+                'classmap' => [
+                    'sObject' => SObject::class,
+                    'QueryResult' => QueryResult::class,
+                ],
             ],
             $soapOptions
         );
 
         if ($proxy !== null) {
-            $soapClientArray = array_merge($soapClientArray, $proxy->toArray());
+            $soapOptions = array_merge($soapOptions, $proxy->toArray());
         }
 
-        $this->sforce = $this->createSoapClient($wsdl, $soapClientArray);
+        $this->sforce = $this->createSoapClient($wsdl, $soapOptions);
 
         return $this->sforce;
     }
@@ -179,14 +160,11 @@ abstract class Base
         if ($this->loginScopeHeader !== null) {
             $this->sforce->__setSoapHeaders([$this->loginScopeHeader]);
         }
-        $response = $this->sforce->login([
-            'username' => $username,
-            'password' => $password,
-        ])->result;
+        $result = $this->sforce
+            ->login(new Wsdl\login($username, $password))
+            ->getResult();
 
-        $result = $this->fromSoapResponse(Wsdl\LoginResult::class, $response);
-
-        $this->_setLoginHeader($result);
+        $this->setLoginHeader($result);
 
         return $result;
     }
@@ -200,37 +178,21 @@ abstract class Base
     {
         $this->setHeaders('logout');
 
-        $response = $this->sforce->logout()->result;
-
-        return $this->fromSoapResponse(Wsdl\logoutResponse::class, $response);
+        return $this->sforce->logout(new Wsdl\logout());
     }
 
     /**
      * Invalidates sessions from the Salseforce.com system
      *
-     * @return Wsdl\invalidateSessionsResult
+     * @return Wsdl\invalidateSessionsResponse
      */
     public function invalidateSessions()
     {
         $this->setHeaders('invalidateSessions');
+
         $this->logout();
 
-        $response = $this->sforce->invalidateSessions();
-
-        return $this->fromSoapResponse(Wsdl\InvalidateSessionsResult::class, $response);
-    }
-
-    /**
-     * Specifies the session ID returned from the login server after a successful login.
-     *
-     * @param Wsdl\LoginResult $loginResult
-     */
-    protected function _setLoginHeader(Wsdl\LoginResult $loginResult)
-    {
-        $this->sessionId = $loginResult->getSessionId();
-        $this->setSessionHeader(new Wsdl\SessionHeader($this->sessionId));
-        $serverURL = $loginResult->getServerUrl();
-        $this->setEndpoint($serverURL);
+        return $this->sforce->invalidateSessions(new Wsdl\invalidateSessions());
     }
 
     /**
@@ -518,49 +480,41 @@ abstract class Base
     }
 
     /**
-     * @param array $request
+     * @param Wsdl\SingleEmailMessage[] $messages
      *
-     * @return Unknown
+     * @return Wsdl\SendEmailResult
+     *
+     * @deprecated Use sendEmail() directly.
      */
-    public function sendSingleEmail(array $request)
+    public function sendSingleEmail(array $messages)
     {
-        $messages = [];
-        foreach ($request as $r) {
-            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'SingleEmailMessage', $this->namespace);
-        }
-        $arg = new \stdClass();
-        $arg->messages = $messages;
-
-        return $this->_sendEmail($arg);
+        return $this->sendEmail($messages);
     }
 
     /**
-     * @param array $request
+     * @param Wsdl\MassEmailMessage[] $messages
      *
-     * @return Unknown
+     * @return Wsdl\SendEmailResult
+     *
+     * @deprecated Use sendEmail() directly.
      */
-    public function sendMassEmail(array $request)
+    public function sendMassEmail(array $messages)
     {
-        $messages = [];
-        foreach ($request as $r) {
-            $messages[] = new \SoapVar($r, SOAP_ENC_OBJECT, 'MassEmailMessage', $this->namespace);
-        }
-        $arg = new \stdClass();
-        $arg->messages = $messages;
-
-        return $this->_sendEmail($arg);
+        return $this->sendEmail($messages);
     }
 
     /**
-     * @param $arg
+     * @param Wsdl\Email[] $messages
      *
-     * @return Unknown
+     * @return Wsdl\SendEmailResult
      */
-    protected function _sendEmail($arg)
+    public function sendEmail(array $messages)
     {
         $this->setHeaders();
 
-        return $this->sforce->sendEmail($arg)->result;
+        return $this->sforce
+            ->sendEmail(new Wsdl\sendEmail($messages))
+            ->getResult();
     }
 
     /**
@@ -568,15 +522,15 @@ abstract class Base
      *
      * @param array $leadConverts Array of LeadConvert
      *
-     * @return LeadConvertResult
+     * @return Wsdl\LeadConvertResult
      */
     public function convertLead($leadConverts)
     {
         $this->setHeaders(static::CALL_CONVERT_LEAD);
-        $arg = new \stdClass();
-        $arg->leadConverts = $leadConverts;
 
-        return $this->sforce->convertLead($arg);
+        return $this->sforce
+            ->convertLead(new Wsdl\convertLead($leadConverts))
+            ->getResult();
     }
 
     /**
@@ -584,26 +538,34 @@ abstract class Base
      *
      * @param array $ids Array of fields
      *
-     * @return DeleteResult
+     * @return Wsdl\DeleteResult
      */
     public function delete($ids)
     {
         $this->setHeaders(static::CALL_DELETE);
+
         if (count($ids) > 200) {
-            $result = [];
-            $chunked_ids = array_chunk($ids, 200);
-            foreach ($chunked_ids as $cids) {
-                $arg = new \stdClass;
-                $arg->ids = $cids;
-                $result = array_merge($result, $this->sforce->delete($arg)->result);
+            $idChunks = array_chunk($ids, 200);
+            $success = true;
+            $errors = [];
+
+            foreach ($idChunks as $idChunk) {
+                $result = $this->sforce
+                    ->delete(new Wsdl\delete($idChunk))
+                    ->getResult();
+
+                $errors[] = $result->getErrors();
+                $success &= $result->getSuccess();
             }
-        } else {
-            $arg = new \stdClass;
-            $arg->ids = $ids;
-            $result = $this->sforce->delete($arg)->result;
+
+            return (new Wsdl\DeleteResult())
+                ->setSuccess($success)
+                ->setErrors(array_merge(...$errors));
         }
 
-        return $result;
+        return $this->sforce
+            ->delete(new Wsdl\delete($ids))
+            ->getResult();
     }
 
     /**
@@ -611,15 +573,15 @@ abstract class Base
      *
      * @param array $ids Array of fields
      *
-     * @return DeleteResult
+     * @return Wsdl\UndeleteResult
      */
     public function undelete($ids)
     {
         $this->setHeaders(static::CALL_UNDELETE);
-        $arg = new \stdClass();
-        $arg->ids = $ids;
 
-        return $this->sforce->undelete($arg)->result;
+        return $this->sforce
+            ->undelete(new Wsdl\undelete($ids))
+            ->getResult();
     }
 
     /**
@@ -627,55 +589,59 @@ abstract class Base
      *
      * @param array $ids Array of fields
      *
-     * @return DeleteResult
+     * @return Wsdl\EmptyRecycleBinResult
      */
     public function emptyRecycleBin($ids)
     {
         $this->setHeaders();
-        $arg = new \stdClass();
-        $arg->ids = $ids;
 
-        return $this->sforce->emptyRecycleBin($arg)->result;
+        return $this->sforce
+            ->emptyRecycleBin(new Wsdl\emptyRecycleBin($ids))
+            ->getResult();
     }
 
     /**
      * Process Submit Request for Approval
      *
-     * @param array $processRequestArray
+     * @param Wsdl\ProcessSubmitRequest[] $processRequests
      *
-     * @return ProcessResult
+     * @return Wsdl\ProcessResult
+     *
+     * @deprecated Use processRequests() directly.
      */
-    public function processSubmitRequest(array $processRequestArray)
+    public function processSubmitRequest(array $processRequests)
     {
-        $arg = new \stdClass();
-        $arg->actions = array_map(
-            function ($process) {
-                return new \SoapVar($process, SOAP_ENC_OBJECT, 'ProcessSubmitRequest', $this->namespace);
-            },
-            $processRequestArray
-        );
-
-        return $this->_process($arg);
+        return $this->processRequests($processRequests);
     }
 
     /**
      * Process Work Item Request for Approval
      *
-     * @param array $processRequestArray
+     * @param Wsdl\ProcessWorkitemRequest[] $processRequests
      *
-     * @return ProcessResult
+     * @return Wsdl\ProcessResult
+     *
+     * @deprecated Use processRequests() directly.
      */
-    public function processWorkitemRequest(array $processRequestArray)
+    public function processWorkitemRequest(array $processRequests)
     {
-        $arg = new \stdClass();
-        $arg->actions = array_map(
-            function ($process) {
-                return new \SoapVar($process, SOAP_ENC_OBJECT, 'ProcessWorkitemRequest', $this->namespace);
-            },
-            $processRequestArray
-        );
+        return $this->processRequests($processRequests);
+    }
 
-        return $this->_process($arg);
+    /**
+     * Process requests.
+     *
+     * @param Wsdl\ProcessRequest[] $processRequests
+     *
+     * @return Wsdl\ProcessResult
+     */
+    public function processRequests(array $processRequests)
+    {
+        $this->setHeaders();
+
+        return $this->sforce
+            ->process(new Wsdl\process($processRequests))
+            ->getResult();
     }
 
     /**
@@ -687,9 +653,9 @@ abstract class Base
     {
         $this->setHeaders(static::CALL_DESCRIBE_GLOBAL);
 
-        $response = $this->sforce->describeGlobal()->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeGlobalResult::class, $response);
+        return $this->sforce
+            ->describeGlobal(new Wsdl\describeGlobal())
+            ->getResult();
     }
 
     /**
@@ -707,15 +673,10 @@ abstract class Base
     public function describeLayout($type, array $recordTypeIds = [])
     {
         $this->setHeaders(static::CALL_DESCRIBE_LAYOUT);
-        $arg = new \stdClass();
-        $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        if (count($recordTypeIds)) {
-            $arg->recordTypeIds = $recordTypeIds;
-        }
 
-        $response = $this->sforce->describeLayout($arg)->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeLayoutResult::class, $response);
+        return $this->sforce
+            ->describeLayout(new Wsdl\describeLayout($type, $recordTypeIds))
+            ->getResult();
     }
 
     /**
@@ -729,12 +690,10 @@ abstract class Base
     public function describeSObject($type)
     {
         $this->setHeaders(static::CALL_DESCRIBE_SOBJECT);
-        $arg = new \stdClass();
-        $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        $response = $this->sforce->describeSObject($arg)->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeSObjectResult::class, $response);
+        return $this->sforce
+            ->describeSObject(new Wsdl\describeSObject($type))
+            ->getResult();
     }
 
     /**
@@ -749,9 +708,9 @@ abstract class Base
     {
         $this->setHeaders(static::CALL_DESCRIBE_SOBJECTS);
 
-        $response = $this->sforce->describeSObjects($arrayOfTypes)->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeSObjectResult::class, $response);
+        return $this->sforce
+            ->describeSObjects(new Wsdl\describeSObjects($arrayOfTypes))
+            ->getResult();
     }
 
     /**
@@ -765,9 +724,9 @@ abstract class Base
     {
         $this->setHeaders(static::CALL_DESCRIBE_TABS);
 
-        $response = $this->sforce->describeTabs()->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeTabSetResult::class, $response);
+        return $this->sforce
+            ->describeTabs(new Wsdl\describeTabs())
+            ->getResult();
     }
 
     /**
@@ -781,12 +740,10 @@ abstract class Base
     public function describeDataCategoryGroups($sObjectType)
     {
         $this->setHeaders(static::CALL_DESCRIBE_DATA_CATEGORY_GROUPS);
-        $arg = new \stdClass();
-        $arg->sObjectType = new \SoapVar($sObjectType, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        $response = $this->sforce->describeDataCategoryGroups($arg)->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeDataCategoryGroupResult::class, $response);
+        return $this->sforce
+            ->describeDataCategoryGroups(new Wsdl\describeDataCategoryGroups($sObjectType))
+            ->getResult();
     }
 
     /**
@@ -795,60 +752,55 @@ abstract class Base
      * @param Wsdl\DataCategoryGroupSobjectTypePair[] $pairs
      * @param bool $topCategoriesOnly Object Type
      *
-     * @return Wsdl\DescribeLayoutResult
+     * @return Wsdl\DescribeDataCategoryGroupStructureResult
      */
     public function describeDataCategoryGroupStructures(array $pairs, $topCategoriesOnly)
     {
         $this->setHeaders(static::CALL_DESCRIBE_DATA_CATEGORY_GROUP_STRUCTURES);
-        $arg = new \stdClass();
-        $arg->pairs = $pairs;
-        $arg->topCategoriesOnly = new \SoapVar($topCategoriesOnly, XSD_BOOLEAN, 'boolean', 'http://www.w3.org/2001/XMLSchema');
 
-        $response = $this->sforce->describeDataCategoryGroupStructures($arg)->result;
-
-        return $this->fromSoapResponse(Wsdl\DescribeLayoutResult::class, $response);
+        return $this->sforce
+            ->describeDataCategoryGroupStructures(
+                new Wsdl\describeDataCategoryGroupStructures($pairs, $topCategoriesOnly)
+            )
+            ->getResult();
     }
 
     /**
      * Retrieves the list of individual objects that have been deleted within the
      * given timespan for the specified object.
      *
-     * @param string $type Ojbect type
-     * @param date $startDate Start date
-     * @param date $endDate End Date
+     * @param string $type Object type
+     * @param \DateTime $startDate Start date
+     * @param \DateTime $endDate End Date
      *
-     * @return GetDeletedResult
+     * @return Wsdl\GetDeletedResult
      */
-    public function getDeleted($type, $startDate, $endDate)
+    public function getDeleted($type, \DateTime $startDate, \DateTime $endDate)
     {
         $this->setHeaders(static::CALL_GET_DELETED);
-        $arg = new \stdClass();
-        $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        $arg->startDate = $startDate;
-        $arg->endDate = $endDate;
 
-        return $this->sforce->getDeleted($arg)->result;
+        return $this->sforce
+            ->getDeleted(new Wsdl\getDeleted($type, $startDate, $endDate))
+            ->getResult();
     }
 
     /**
      * Retrieves the list of individual objects that have been updated (added or
      * changed) within the given timespan for the specified object.
      *
-     * @param string $type Ojbect type
-     * @param date $startDate Start date
-     * @param date $endDate End Date
+     * @param string $type Object type
+     * @param \DateTime $startDate Start date
+     * @param \DateTime $endDate End Date
      *
-     * @return GetUpdatedResult
+     * @return Wsdl\GetUpdatedResult
      */
-    public function getUpdated($type, $startDate, $endDate)
+    public function getUpdated($type, \DateTime $startDate, \DateTime $endDate)
     {
         $this->setHeaders(static::CALL_GET_UPDATED);
-        $arg = new \stdClass();
-        $arg->sObjectType = new \SoapVar($type, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        $arg->startDate = $startDate;
-        $arg->endDate = $endDate;
 
-        return $this->sforce->getUpdated($arg)->result;
+        return $this->sforce
+            ->getUpdated(new Wsdl\getUpdated($type, $startDate, $endDate))
+            ->getResult();
     }
 
     /**
@@ -862,46 +814,45 @@ abstract class Base
     public function query($query)
     {
         $this->setHeaders(static::CALL_QUERY);
-        $raw = $this->sforce
-            ->query(['queryString' => $query])
-            ->result;
 
-        return new QueryResult($raw, $this);
+        return $this->sforce
+            ->query(new Wsdl\query($query))
+            ->getResult()
+            ->setClient($this);
     }
 
     /**
      * Retrieves the next batch of objects from a query.
      *
-     * @param QueryLocator $queryLocator Represents the server-side cursor that tracks the current processing location in the query result set.
+     * @param string $queryLocator Represents the server-side cursor that tracks the current processing location in the query result set.
      *
      * @return QueryResult
      */
     public function queryMore($queryLocator)
     {
         $this->setHeaders(static::CALL_QUERY_MORE);
-        $arg = new \stdClass();
-        $arg->queryLocator = $queryLocator;
-        $raw = $this->sforce->queryMore($arg)->result;
 
-        return new QueryResult($raw, $this);
+        return $this->sforce
+            ->queryMore(new Wsdl\queryMore($queryLocator))
+            ->getResult()
+            ->setClient($this);
     }
 
     /**
      * Retrieves data from specified objects, whether or not they have been deleted.
      *
-     * @param String $query Query String
-     * @param QueryOptions $queryOptions Batch size limit.  OPTIONAL
+     * @param string $queryString Query String
      *
      * @return QueryResult
      */
-    public function queryAll($query, $queryOptions = null)
+    public function queryAll($queryString)
     {
         $this->setHeaders(static::CALL_QUERY_ALL);
-        $raw = $this->sforce->queryAll([
-            'queryString' => $query,
-        ])->result;
 
-        return new QueryResult($raw, $this);
+        return $this->sforce
+            ->queryAll(new Wsdl\queryAll($queryString))
+            ->getResult()
+            ->setClient($this);
     }
 
     /**
@@ -916,12 +867,12 @@ abstract class Base
     public function retrieve($fieldList, $sObjectType, $ids)
     {
         $this->setHeaders(static::CALL_RETRIEVE);
-        $arg = new \stdClass();
-        $arg->fieldList = $fieldList;
-        $arg->sObjectType = new \SoapVar($sObjectType, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        $arg->ids = $ids;
 
-        return $this->sforce->retrieve($arg)->result;
+        $result = $this->sforce
+            ->retrieve(new Wsdl\retrieve($fieldList, $sObjectType, $ids))
+            ->getResult();
+
+        return is_array($result) ? $result : [$result];
     }
 
     /**
@@ -929,37 +880,41 @@ abstract class Base
      *
      * @param string $searchString Search string that specifies the text expression to search for.
      *
-     * @return SearchResult
+     * @return Wsdl\SearchResult
      */
     public function search($searchString)
     {
         $this->setHeaders(static::CALL_SEARCH);
-        $arg = new \stdClass();
-        $arg->searchString = new \SoapVar($searchString, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        return new SearchResult($this->sforce->search($arg)->result, $this);
+        return $this->sforce
+            ->search(new Wsdl\search($searchString))
+            ->getResult();
     }
 
     /**
      * Retrieves the current system timestamp (GMT) from the Web service.
      *
-     * @return timestamp
+     * @return Wsdl\GetServerTimestampResult
      */
     public function getServerTimestamp()
     {
         $this->setHeaders(static::CALL_GET_SERVER_TIMESTAMP);
 
-        return $this->sforce->getServerTimestamp()->result;
+        return $this->sforce
+            ->getServerTimestamp(new Wsdl\getServerTimestamp())
+            ->getResult();
     }
 
     /**
-     * @return UserInfo
+     * @return Wsdl\GetUserInfoResult
      */
     public function getUserInfo()
     {
         $this->setHeaders(static::CALL_GET_USER_INFO);
 
-        return $this->sforce->getUserInfo()->result;
+        return $this->sforce
+            ->getUserInfo(new Wsdl\getUserInfo())
+            ->getResult();
     }
 
     /**
@@ -968,16 +923,15 @@ abstract class Base
      * @param string $userId ID of the User
      * @param string $password New password
      *
-     * @return password
+     * @return Wsdl\SetPasswordResult
      */
     public function setPassword($userId, $password)
     {
         $this->setHeaders(static::CALL_SET_PASSWORD);
-        $arg = new \stdClass();
-        $arg->userId = new \SoapVar($userId, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
-        $arg->password = $password;
 
-        return $this->sforce->setPassword($arg);
+        return $this->sforce
+            ->setPassword(new Wsdl\setPassword($userId, $password))
+            ->getResult();
     }
 
     /**
@@ -985,15 +939,15 @@ abstract class Base
      *
      * @param string $userId Id of the User
      *
-     * @return password
+     * @return Wsdl\ResetPasswordResult
      */
     public function resetPassword($userId)
     {
         $this->setHeaders(static::CALL_RESET_PASSWORD);
-        $arg = new \stdClass();
-        $arg->userId = new \SoapVar($userId, XSD_STRING, 'string', 'http://www.w3.org/2001/XMLSchema');
 
-        return $this->sforce->resetPassword($arg)->result;
+        return $this->sforce
+            ->resetPassword(new Wsdl\resetPassword($userId))
+            ->getResult();
     }
 
 
@@ -1003,7 +957,7 @@ abstract class Base
      * @param SObject[] $sObjects Array of one or more sObjects (up to 200) to create.
      * @param null|string $type
      *
-     * @return SaveResult
+     * @return Wsdl\SaveResult
      */
     abstract public function create($sObjects, $type = null);
 
@@ -1011,11 +965,11 @@ abstract class Base
      * @param string $wsdl
      * @param array $options
      *
-     * @return \SoapClient
+     * @return Wsdl\SforceService
      */
     protected function createSoapClient($wsdl, $options)
     {
-        return new \SoapClient($wsdl, $options);
+        return new Wsdl\SforceService($options, $wsdl);
     }
 
     /**
@@ -1045,14 +999,16 @@ abstract class Base
     }
 
     /**
-     * @param string $class
-     * @param null|object $soapResponse
+     * Specifies the session ID returned from the login server after a successful login.
      *
-     * @return mixed
+     * @param Wsdl\LoginResult $loginResult
      */
-    protected function fromSoapResponse($class, $soapResponse)
+    protected function setLoginHeader(Wsdl\LoginResult $loginResult)
     {
-        return $this->serializer->deserialize($soapResponse, $class, 'object');
+        $this->sessionId = $loginResult->getSessionId();
+        $this->setSessionHeader(new Wsdl\SessionHeader($this->sessionId));
+        $serverURL = $loginResult->getServerUrl();
+        $this->setEndpoint($serverURL);
     }
 
     /**
@@ -1074,34 +1030,27 @@ abstract class Base
     {
         $this->setHeaders(static::CALL_CREATE);
 
-        return $this->sforce->create($arg)->result;
+        return $this->sforce->create($arg)->getResult();
     }
 
     protected function _merge($arg)
     {
         $this->setHeaders(static::CALL_MERGE);
 
-        return $this->sforce->merge($arg)->result;
-    }
-
-    protected function _process($arg)
-    {
-        $this->setHeaders();
-
-        return $this->sforce->process($arg)->result;
+        return $this->sforce->merge($arg)->getResult();
     }
 
     protected function _update($arg)
     {
         $this->setHeaders(static::CALL_UPDATE);
 
-        return $this->sforce->update($arg)->result;
+        return $this->sforce->update($arg)->getResult();
     }
 
     protected function _upsert($arg)
     {
         $this->setHeaders(static::CALL_UPSERT);
 
-        return $this->sforce->upsert($arg)->result;
+        return $this->sforce->upsert($arg)->getResult();
     }
 }

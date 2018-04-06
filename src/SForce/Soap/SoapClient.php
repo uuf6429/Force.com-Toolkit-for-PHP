@@ -28,7 +28,9 @@
 
 namespace SForce\Soap;
 
-class SoapClient extends \SoapClient
+use SForce\Wsdl;
+
+class SoapClient extends Wsdl\SforceService
 {
     /** @noinspection MagicMethodsValidityInspection */
     /** @inheritdoc */

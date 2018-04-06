@@ -28,166 +28,111 @@
 
 namespace SForce;
 
-class SObject
+class SObject extends Wsdl\sObject
 {
-    public $Id;
-    public $type;
-    public $fields;
+    /**
+     * @var null|array
+     */
+    protected $fields;
 
     /**
-     * @param null|\stdClass $response
-     * @param Client\Base $sfClient
+     * @param string $name
+     * @return mixed
      */
-    public function __construct($response, Client\Base $sfClient)
-    {
-        if (!$response) {
-            return;
-        }
-
-        foreach ((array)$response as $responseKey => $responseValue) {
-            if (in_array((string)$responseKey, ['Id', 'type', 'any'], true)) {
-                continue;
-            }
-            $this->$responseKey = $responseValue;
-        }
-
-        if (isset($response->Id)) {
-            $this->Id = is_array($response->Id) ? $response->Id[0] : $response->Id;
-        }
-
-        if (isset($response->type)) {
-            $this->type = $response->type;
-        }
-
-        if (isset($response->any)) {
-            //$this->fields = $this->convertFields($response->any);
-            // If ANY is an object, instantiate another SObject
-            if ($response->any instanceof \stdClass) {
-                if ($this->isSObject($response->any)) {
-                    $anArray = [];
-                    $sobject = new SObject($response->any, $sfClient);
-                    $anArray[] = $sobject;
-                    $this->sobjects = $anArray;
-                } else {
-                    // this is for parent to child relationships
-                    $this->queryResult = new QueryResult($response->any, $sfClient);
-                }
-            } else {
-                // If ANY is an array
-                if (is_array($response->any)) {
-                    // Loop through each and perform some action.
-                    $anArray = [];
-
-                    // Modify the foreach to have $key=>$value
-                    // Added on 28th April 2008
-                    foreach ($response->any as $key => $item) {
-                        if ($item instanceof \stdClass) {
-                            if ($this->isSObject($item)) {
-                                // make an associative array instead of a numeric one
-                                $anArray[$key] = new SObject($item, $sfClient);
-                            } else {
-                                // this is for parent to child relationships
-                                //$this->queryResult = new QueryResult($item);
-                                if (!isset($this->queryResult)) {
-                                    $this->queryResult = [];
-                                }
-                                $this->queryResult[] = new QueryResult($item, $sfClient);
-                            }
-                        } else {
-                            //$this->fields = $this->convertFields($item);
-
-                            if (strpos($item, 'sf:') === false) {
-                                $currentXmlValue = sprintf('<sf:%s>%s</sf:%s>', $key, $item, $key);
-                            } else {
-                                $currentXmlValue = $item;
-                            }
-
-                            if (!isset($fieldsToConvert)) {
-                                $fieldsToConvert = $currentXmlValue;
-                            } else {
-                                $fieldsToConvert .= $currentXmlValue;
-                            }
-                        }
-                    }
-
-                    if (isset($fieldsToConvert)) {
-                        $this->fields = $this->convertFields($fieldsToConvert);
-                    }
-
-                    if (count($anArray)) {
-                        foreach ($anArray as $key => $children_sobject) {
-                            $this->fields->$key = $children_sobject;
-                        }
-                    }
-                } else {
-                    $this->fields = $this->convertFields($response->any);
-                }
-            }
-        }
-    }
-
     public function __get($name)
     {
-        return isset($this->fields->$name) ? $this->fields->$name : false;
+        $this->initFields();
+
+        return isset($this->fields[$name]) ? $this->fields[$name] : false;
     }
 
+    /**
+     * @param string $name
+     * @param mixed $value
+     */
     public function __set($name, $value)
     {
-        $this->fields->$name = $value;
+        $this->initFields();
+
+        $this->fields[$name] = $value;
     }
 
+    /**
+     * @param string $name
+     * @return bool
+     */
     public function __isset($name)
     {
-        return isset($this->fields->$name);
+        $this->initFields();
+
+        return isset($this->fields[$name]);
+    }
+
+    /**
+     * @return string
+     */
+    public function getId()
+    {
+        return is_array($this->Id) ? $this->Id[0] : $this->Id;
+    }
+
+    /**
+     * @return object
+     */
+    public function getFields()
+    {
+        $this->initFields();
+
+        return (object)$this->fields;
     }
 
     /**
      * Parse the "any" string from an sObject.  First strip out the sf: and then
      * enclose string with <Object></Object>.  Load the string using
      * simplexml_load_string and return an array that can be traversed.
+     *
+     * @param string $any
+     *
+     * @return array
      */
-    public function convertFields($any)
+    protected function convertFields($any)
     {
+        static $root = 'Object';
         $str = preg_replace('{sf:}', '', $any);
 
-        $array = $this->xml2array('<Object xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . $str . '</Object>', 2);
+        $array = $this->xml2array(
+            "<$root xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>$str</$root>",
+            2
+        );
 
-        $xml = new \stdClass();
-        if (!count($array['Object'])) {
-            return $xml;
-        }
-
-        foreach ($array['Object'] as $k => $v) {
-            $xml->$k = $v;
-        }
-
-        return $xml;
+        return (array)$array[$root];
     }
 
     /**
      *
      * @param string $contents
+     * @param int $getAttributes
      *
      * @return array
      */
-    public function xml2array($contents, $get_attributes = 1)
+    public function xml2array($contents, $getAttributes = 1)
     {
         if (!$contents) {
             return [];
         }
 
         if (!function_exists('xml_parser_create')) {
-            //print "'xml_parser_create()' function not found!";
+            // TODO "'xml_parser_create()' function not found!";
             return ['not found'];
         }
         //Get the XML parser of PHP - PHP must have this module for the parser to work
         $parser = xml_parser_create();
         xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, 0);
         xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
-        xml_parse_into_struct($parser, $contents, $xml_values);
+        xml_parse_into_struct($parser, $contents, $xmlValues);
         xml_parser_free($parser);
 
-        if (!$xml_values) {
+        if (!$xmlValues) {
             return [];
         }//Hmm...
 
@@ -197,7 +142,7 @@ class SObject
         $current = &$xml_array;
 
         //Go through the tags.
-        foreach ($xml_values as $data) {
+        foreach ($xmlValues as $data) {
             unset($attributes, $value);//Remove existing values, or there will be trouble
 
             //This command will extract these variables into the foreach scope
@@ -205,8 +150,8 @@ class SObject
             extract($data);//We could use the array by itself, but this cooler.
 
             $result = '';
-            if ($get_attributes) {
-                switch ($get_attributes) {
+            if ($getAttributes) {
+                switch ($getAttributes) {
                     case 1:
                         $result = [];
                         if (isset($value)) {
@@ -216,7 +161,7 @@ class SObject
                         //Set the attributes too.
                         if (isset($attributes)) {
                             foreach ($attributes as $attr => $val) {
-                                if ($get_attributes == 1) {
+                                if ($getAttributes == 1) {
                                     $result['attr'][$attr] = $val;
                                 } //Set all the attributes in a array called 'attr'
                                 /**  :TODO: should we change the key name to '_attr'? Someone may use the tagname 'attr'. Same goes for 'value' too */
@@ -261,8 +206,8 @@ class SObject
                 if (!isset($current[$tag])) { //New Key
                     $current[$tag] = $result;
                 } else { //If taken, put all things inside a list(array)
-                    if ((is_array($current[$tag]) && $get_attributes == 0)//If it is already an array...
-                        || (isset($current[$tag][0]) && is_array($current[$tag][0]) && ($get_attributes == 1 || $get_attributes == 2))) {
+                    if ((is_array($current[$tag]) && $getAttributes == 0)//If it is already an array...
+                        || (isset($current[$tag][0]) && is_array($current[$tag][0]) && ($getAttributes == 1 || $getAttributes == 2))) {
                         $current[$tag][] = $result; // ...push the new element into that array.
                     } else { //If it is not an array...
                         $current[$tag] = [
@@ -279,19 +224,30 @@ class SObject
         return $xml_array;
     }
 
-    /*
+    /**
      * If the stdClass has a done, we know it is a QueryResult
+     *
+     * @deprecated Do not use, this will be removed.
      */
     public function isQueryResult($param)
     {
         return isset($param->done);
     }
 
-    /*
+    /**
      * If the stdClass has a type, we know it is an SObject
+     *
+     * @deprecated Do not use, this will be removed.
      */
     public function isSObject($param)
     {
         return isset($param->type);
+    }
+
+    protected function initFields()
+    {
+        if ($this->fields === null && $this->any !== null) {
+            $this->fields = $this->convertFields($this->any);
+        }
     }
 }

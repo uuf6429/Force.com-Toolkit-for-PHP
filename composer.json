@@ -6,8 +6,7 @@
     "autoload": {
         "psr-4": {
             "SForce\\": "src/SForce",
-            "Composer\\": "src/Composer",
-            "JMS\\": "src/JMS"
+            "Composer\\": "src/Composer"
         }
     },
     "autoload-dev": {
@@ -21,8 +20,7 @@
         "ext-soap": "*",
         "ext-dom": "*",
         "composer-plugin-api": "^1",
-        "wsdl2phpgenerator/wsdl2phpgenerator": "^3.4",
-        "jms/serializer": "^1.11"
+        "wsdl2phpgenerator/wsdl2phpgenerator": "^3.4"
     },
     "require-dev": {
         "phpunit/phpunit": "^7 || ^5",

@@ -28,8 +28,6 @@
 
 namespace SForce\Client;
 
-use SForce\Soap\AssignmentRuleHeader;
-use SForce\Soap\MruHeader;
 use SForce\SObject;
 
 class Enterprise extends Base
@@ -38,8 +36,6 @@ class Enterprise extends Base
 
     public function __construct()
     {
-        parent::__construct();
-
         $this->namespace = self::ENTERPRISE_NAMESPACE;
     }
 
