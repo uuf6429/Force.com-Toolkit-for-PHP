@@ -74,6 +74,8 @@ class SForceDeserializerTest extends TestCase
 
     /**
      * @return array
+     *
+     * @throws \ReflectionException
      */
     public function deserializationScenarioDataProvider()
     {
@@ -206,6 +208,15 @@ class SForceDeserializerTest extends TestCase
                 '$expectedResult' => (new \ReflectionClass(Wsdl\CaseTeamTemplate::class))
                     ->newInstanceWithoutConstructor()
                     ->setCreatedDate(new \DateTime('20-02-2018 18:50')),
+            ],
+
+            'test object with a property using a non-existent type' => [
+                '$data' => (object)[],
+                '$class' => SForceDeserializerTestClass::class,
+                '$expectedResult' => null,
+                '$expectedException' => new Serializer\Exception\RuntimeException(
+                    'Type \'SomeFakeType\' is not supported or known.'
+                ),
             ],
         ];
     }

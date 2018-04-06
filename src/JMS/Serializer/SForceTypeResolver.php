@@ -29,6 +29,7 @@
 namespace JMS\Serializer;
 
 use JMS\Serializer\Annotation\TypeResolver;
+use JMS\Serializer\Exception\RuntimeException;
 
 class SForceTypeResolver implements TypeResolver
 {
@@ -37,23 +38,35 @@ class SForceTypeResolver implements TypeResolver
     const RETURN_PLAIN = '%s';
     const RETURN_ARRAY = 'array<%s>';
 
+    const TYPE_NULL = 'null';
+    const TYPE_BOOLEAN = 'bool';
+    const TYPE_FLOAT = 'float';
+    const TYPE_STRING = 'string';
+    const TYPE_INTEGER = 'int';
+
     /**
      * @var array
      */
     private static $typeAliasMap = [
-        'ID' => 'string',
-        'boolean' => 'bool',
-        'double' => 'float',
-        'void' => 'null',
-        'base64Binary' => 'string',
-        'soapType' => 'string',
-        'fieldType' => 'string',
+        'ID' => self::TYPE_STRING,
+        'boolean' => self::TYPE_BOOLEAN,
+        'double' => self::TYPE_FLOAT,
+        'void' => self::TYPE_NULL,
+        'base64Binary' => self::TYPE_STRING,
+        'soapType' => self::TYPE_STRING,
+        'fieldType' => self::TYPE_STRING,
     ];
 
     /**
      * @var string[]
      */
-    private static $simpleTypes = ['null', 'bool', 'int', 'float', 'string'];
+    private static $simpleTypes = [
+        self::TYPE_NULL,
+        self::TYPE_BOOLEAN,
+        self::TYPE_INTEGER,
+        self::TYPE_FLOAT,
+        self::TYPE_STRING,
+    ];
 
     /**
      * @var array
@@ -102,11 +115,6 @@ class SForceTypeResolver implements TypeResolver
             return $this->typeCache[$origType] = sprintf($returnTpl, self::WSDL_NS . $type);
         }
 
-        // "Other" classes (this is probably wrong)
-        if (class_exists($type)) {
-            return $this->typeCache[$origType] = sprintf($returnTpl, ltrim($type, '\\'));
-        }
-
-        throw new \RuntimeException("Type '$type' is not supported or known.");
+        throw new RuntimeException("Type '$origType' is not supported or known.");
     }
 }
