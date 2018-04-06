@@ -207,7 +207,7 @@ class SForceDeserializerTest extends TestCase
                 '$class' => Wsdl\CaseTeamTemplate::class,
                 '$expectedResult' => (new \ReflectionClass(Wsdl\CaseTeamTemplate::class))
                     ->newInstanceWithoutConstructor()
-                    ->setCreatedDate(new \DateTime('20-02-2018 18:50')),
+                    ->setCreatedDate(new \DateTime('2018-02-20T18:50:00+01:00')),
             ],
 
             'test object with a property using a non-existent type' => [
