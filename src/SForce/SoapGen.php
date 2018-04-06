@@ -99,6 +99,12 @@ class SoapGen
         $this->logger->debug('Starting WSDL generator');
         $generator = new Generator();
 
+        // remove older classes
+        foreach (glob($this->wsdlClassPath . '*.php') as $phpFile) {
+            unlink($phpFile);
+        }
+
+        // generate new classes
         foreach ($this->wsdlSources as $wsdlSource) {
             $this->logger->info('Generating WSDL classes for ' . basename($wsdlSource));
             $generator->generate(
