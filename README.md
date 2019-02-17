@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/uuf6429/Force.com-Toolkit-for-PHP.svg?branch=Major-refactor)](https://travis-ci.org/uuf6429/Force.com-Toolkit-for-PHP)
 [![Minimum PHP Version](https://img.shields.io/badge/php-%3E%3D%205.6-8892BF.svg)](https://php.net/)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](LICENSE)
-[![Coverage](https://sonarcloud.io/api/badges/measure?metric=coverage&key=Force.com-Toolkit-for-PHP%3AMajor-refactor)](https://sonarcloud.io/dashboard?id=Force.com-Toolkit-for-PHP%3AMajor-refactor)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?metric=coverage&project=Force.com-Toolkit-for-PHP%3AMajor-refactor)](https://sonarcloud.io/dashboard?id=Force.com-Toolkit-for-PHP%3AMajor-refactor)
 [![Packagist](https://img.shields.io/packagist/v/uuf6429/Force.com-Toolkit-for-PHP.svg)](https://packagist.org/packages/uuf6429/Force.com-Toolkit-for-PHP)
 
 The Force.com PHP Toolkit provides an easy-to-use wrapper for the Force.com Web Services SOAP API, presenting SOAP client implementations for both the enterprise and partner WSDLs.
